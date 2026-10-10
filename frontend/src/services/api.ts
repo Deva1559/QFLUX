@@ -18,7 +18,7 @@ import {
   PrioritizationRunResponse
 } from '../types';
 
-let customBaseUrl = 'http://localhost:8000';
+let customBaseUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000';
 
 export const setApiBaseUrl = (url: string) => {
   customBaseUrl = url.replace(/\/+$/, '');
