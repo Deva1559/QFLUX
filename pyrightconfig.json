@@ -1,0 +1,17 @@
+{
+  "include": [
+    "backend",
+    "app.py"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "backend",
+      "extraPaths": [
+        "backend"
+      ]
+    }
+  ]
+}
