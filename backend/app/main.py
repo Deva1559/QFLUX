@@ -29,11 +29,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configuration explicitly for local mobile / web development
+# CORS configuration explicitly honoring configured origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True if settings.CORS_ORIGINS != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

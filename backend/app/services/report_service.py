@@ -214,13 +214,14 @@ class ReportGeneratorService:
         story.append(Paragraph("4. PFAS Classical Electronic-Structure Runs", h1_style))
         if chem_runs:
             cr = chem_runs[0]
+            rxn_display = f"<b>Reaction Energetics:</b> {cr.reaction_name}: <b>ΔE = {cr.reaction_energy_kcal_mol:.2f} kcal/mol</b><br/>" if cr.reaction_energy_kcal_mol is not None else f"<b>Reaction Pathway:</b> {cr.reaction_name or 'Isolated Electronic Structure'} (ΔE unpopulated until product fragments computed)<br/>"
             cr_text = (
-                f"<b>Model System:</b> {cr.run_name}<br/>"
+                f"<b>Model System:</b> {cr.run_name} | <b>Evidence Status:</b> COMPUTED<br/>"
                 f"<b>Method / Basis:</b> {cr.method_name} | <b>Nuclear Repulsion:</b> {cr.nuclear_repulsion_energy_au:.4f} a.u.<br/>"
                 f"<b>Total Electronic Energy:</b> {cr.electronic_energy_au:.4f} a.u. | <b>Total SCF Energy:</b> {cr.total_scf_energy_au:.6f} a.u.<br/>"
                 f"<b>HOMO:</b> {cr.homo_energy_ev:.2f} eV | <b>LUMO:</b> {cr.lumo_energy_ev:.2f} eV | <b>HOMO-LUMO Gap:</b> {cr.homo_lumo_gap_ev:.2f} eV<br/>"
-                f"<b>Reaction Energetics:</b> {cr.reaction_name or 'N/A'}: <b>ΔE = {cr.reaction_energy_kcal_mol} kcal/mol</b> (Exothermic)<br/>"
-                f"<b>Model Limitations:</b> {cr.limitations}"
+                f"{rxn_display}"
+                f"<b>Model Limitations & Scope:</b> {cr.limitations}"
             )
             story.append(Paragraph(cr_text, body_style))
         story.append(Spacer(1, 6))
@@ -229,13 +230,15 @@ class ReportGeneratorService:
         story.append(Paragraph("5. Quantum Algorithm Workbench (VQE vs Exact Reference)", h1_style))
         if quantum_runs:
             qr = quantum_runs[0]
+            sim_badge = "ILLUSTRATIVE (Toy Model)" if qr.is_toy_model else "COMPUTED (Molecule-Derived Active Space)"
             qr_text = (
-                f"<b>Model Type:</b> {qr.model_type} ({qr.num_qubits} Qubits)<br/>"
+                f"<b>Model Type:</b> {qr.model_type} ({qr.num_qubits} Qubits) | <b>Status:</b> {sim_badge}<br/>"
                 f"<b>Hamiltonian Terms:</b> <code>{qr.hamiltonian_definition}</code><br/>"
                 f"<b>Classical Exact Ground Energy:</b> {qr.exact_energy:.8f} a.u.<br/>"
                 f"<b>VQE Estimated Energy:</b> {qr.vqe_energy:.8f} a.u.<br/>"
                 f"<b>Absolute Algorithmic Error (|ΔE|):</b> <b>{qr.absolute_error:.3e} a.u.</b> (Optimizer: {qr.optimizer_name}, Iterations: {qr.iterations})<br/>"
-                f"<b>Statevector Simulation Execution:</b> {qr.execution_time_ms:.1f} ms | <b>Disclaimer:</b> {qr.disclaimer_text}"
+                f"<b>Execution Environment:</b> Classical Statevector Simulator (No physical quantum hardware) | {qr.execution_time_ms:.1f} ms<br/>"
+                f"<b>Governance Disclaimer:</b> {qr.disclaimer_text}"
             )
             story.append(Paragraph(qr_text, body_style))
         story.append(Spacer(1, 6))
@@ -258,9 +261,9 @@ class ReportGeneratorService:
         # 8. Epistemological Summary
         story.append(Paragraph("7. Epistemological Synthesis (Known vs Unknown)", h1_style))
         epi_text = (
-            "• <b>What is Known:</b> In2O3 nanocubes demonstrate verified high defluorination (78.4%) under UV-C; ZVI and BDD exhibit significant parent disappearance but generate persistent short-chain PFCA intermediates.<br/>"
-            "• <b>What has been Calculated:</b> Gas-phase RHF/STO-3G decarboxylation of CF3COO- is exothermic (ΔE = -18.4 kcal/mol); 2-qubit reduced C-F active space VQE converges to exact diagonalization within 10^-14 a.u.<br/>"
-            "• <b>What Remains Unknown:</b> Activation barriers for heterogeneous interfacial C-F cleavage in presence of explicit water; pilot-scale stability of In2O3 in turbid wastewater."
+            "• <b>What is Experimentally Known:</b> In2O3 nanocubes demonstrate verified high defluorination (78.4%) under UV-C; ZVI and BDD exhibit significant parent disappearance but generate persistent short-chain PFCA intermediates.<br/>"
+            "• <b>What has been Computed:</b> Ab-initio electronic structure evaluates fragment ground states and frontier orbital energies; 2-qubit reduced C-F active space VQE reproduces classical exact diagonalization without quantum advantage claims.<br/>"
+            "• <b>What Remains Unknown:</b> Heterogeneous transition-state activation barriers in explicit aqueous solvent; long-term pilot stability under competing wastewater matrix anions."
         )
         story.append(Paragraph(epi_text, body_style))
         story.append(Spacer(1, 6))
@@ -295,5 +298,107 @@ class ReportGeneratorService:
         db.refresh(db_report)
 
         return db_report
+
+    @staticmethod
+    def generate_csv_report(db: Session, project_id: int) -> str:
+        """Generates a comprehensive scientific CSV report containing research question,
+        catalyst comparisons, calculation results, and fluorine mass balance."""
+        import csv
+        import io
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValueError(f"Project with ID {project_id} does not exist.")
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Section 1: Project Metadata
+        writer.writerow(["# Q-FLUX 2.0 SCIENTIFIC RESEARCH DOSSIER (CSV EXPORT)"])
+        writer.writerow(["Timestamp (UTC)", datetime.utcnow().isoformat()])
+        writer.writerow(["Software Version", settings.VERSION])
+        writer.writerow(["Project ID", project.id])
+        writer.writerow(["Project Title", project.title])
+        writer.writerow(["Target PFAS", project.target_pfas])
+        writer.writerow(["Research Question", project.research_question])
+        writer.writerow(["Destruction Approach", project.destruction_approach or "Not specified"])
+        writer.writerow([])
+
+        # Section 2: Catalyst Evaluations & Defluorination Benchmarks
+        writer.writerow(["# CATALYST CANDIDATES & MULTI-DIMENSIONAL BENCHMARKS"])
+        writer.writerow([
+            "Catalyst Name", "Formula", "Material Type", "Treatment Mechanism",
+            "Reaction Conditions", "Parent Removal (%)", "Defluorination (%)",
+            "Byproducts", "Stability (Cycles)", "Energy (kWh/m3)", "Status", "DOI"
+        ])
+        catalysts = db.query(Catalyst).all()
+        for c in catalysts:
+            writer.writerow([
+                c.name, c.chemical_formula, c.material_type, c.treatment_mechanism,
+                c.reaction_conditions, c.reported_parent_removal_pct,
+                c.reported_defluorination_pct if c.reported_defluorination_pct is not None else "MISSING",
+                c.reported_byproducts or "Not reported",
+                c.catalyst_stability_cycles if c.catalyst_stability_cycles is not None else "N/A",
+                c.energy_intensity_kwh_m3 if c.energy_intensity_kwh_m3 is not None else "N/A",
+                c.verification_status, c.doi_or_url or "N/A"
+            ])
+        writer.writerow([])
+
+        # Section 3: Classical Molecular Electronic Structure Runs
+        writer.writerow(["# CLASSICAL MOLECULAR SCF CHEMISTRY (RHF/STO-3G)"])
+        writer.writerow([
+            "Model Name", "Formula", "Method", "Total SCF Energy (Hartree)",
+            "HOMO-LUMO Gap (eV)", "Dipole (Debye)", "Reaction Cleavage Step",
+            "Reaction Energy (kcal/mol)", "Converged", "Iterations"
+        ])
+        chem_runs = db.query(ClassicalChemistryRun).all()
+        for cr in chem_runs:
+            writer.writerow([
+                cr.model.name if cr.model else "Model",
+                cr.model.chemical_formula if cr.model else "N/A",
+                cr.method_name, f"{cr.total_scf_energy_au:.6f}",
+                f"{cr.homo_lumo_gap_ev:.3f}", f"{cr.dipole_moment_debye:.2f}",
+                cr.reaction_name or "N/A",
+                f"{cr.reaction_energy_kcal_mol:.2f}" if cr.reaction_energy_kcal_mol is not None else "N/A",
+                cr.converged, cr.iterations
+            ])
+        writer.writerow([])
+
+        # Section 4: Quantum Computing VQE Benchmarks
+        writer.writerow(["# QUANTUM BENCHMARKS (VARIATIONAL QUANTUM EIGENSOLVER)"])
+        writer.writerow([
+            "Run Name", "Model Type", "Qubits", "Exact Energy (Hartree)",
+            "VQE Energy (Hartree)", "Absolute Error (Hartree)", "Optimizer",
+            "Iterations", "Is Toy Model", "Disclaimer"
+        ])
+        quantum_runs = db.query(QuantumRun).all()
+        for qr in quantum_runs:
+            writer.writerow([
+                qr.run_name, qr.model_type, qr.num_qubits,
+                f"{qr.exact_energy:.8f}", f"{qr.vqe_energy:.8f}",
+                f"{qr.absolute_error:.8e}", qr.optimizer_name,
+                qr.iterations, qr.is_toy_model, qr.disclaimer_text
+            ])
+        writer.writerow([])
+
+        # Section 5: Fluorine Mass-Balance Scenarios
+        writer.writerow(["# FLUORINE MASS-BALANCE FORENSIC ACCOUNTING"])
+        writer.writerow([
+            "Scenario Name", "Initial Inventory", "Basis Units",
+            "Measured Inorganic F-", "Remaining Organic F", "Other F",
+            "Defluorination (%)", "Closure (%)", "Closure Status", "Uncertainty Flags"
+        ])
+        scenarios = db.query(FluorineBalanceScenario).all()
+        for sc in scenarios:
+            writer.writerow([
+                sc.scenario_name, sc.initial_fluorine_inventory, sc.inventory_basis_units,
+                sc.measured_inorganic_fluoride if sc.measured_inorganic_fluoride is not None else "MISSING",
+                sc.remaining_organic_fluorine if sc.remaining_organic_fluorine is not None else "MISSING",
+                sc.other_identified_fluorine or 0.0,
+                f"{sc.apparent_defluorination_pct:.1f}%" if sc.apparent_defluorination_pct is not None else "N/A",
+                f"{sc.mass_balance_closure_pct:.1f}%" if sc.mass_balance_closure_pct is not None else "N/A",
+                sc.closure_status, sc.uncertainty_flags or "None"
+            ])
+
+        return output.getvalue()
 
 report_service = ReportGeneratorService()

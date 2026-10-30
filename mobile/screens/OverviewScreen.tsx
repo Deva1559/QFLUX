@@ -119,11 +119,38 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
       <View style={styles.actionGrid}>
         <TouchableOpacity
           style={styles.actionButton}
+          onPress={() => onNavigate('pfas')}
+        >
+          <Text style={styles.actionIcon}>🧬</Text>
+          <Text style={styles.actionTitle}>PFAS Library</Text>
+          <Text style={styles.actionSubtitle}>Chemical properties & CAS</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onNavigate('catalysts')}
+        >
+          <Text style={styles.actionIcon}>⚗️</Text>
+          <Text style={styles.actionTitle}>Catalyst Explorer</Text>
+          <Text style={styles.actionSubtitle}>MCDA scoring & trade-offs</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onNavigate('chemistry')}
+        >
+          <Text style={styles.actionIcon}>🔬</Text>
+          <Text style={styles.actionTitle}>Molecular Lab</Text>
+          <Text style={styles.actionSubtitle}>RHF/STO-3G SCF & ΔErxn</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
           onPress={() => onNavigate('quantum')}
         >
           <Text style={styles.actionIcon}>⚛️</Text>
           <Text style={styles.actionTitle}>Quantum Lab</Text>
-          <Text style={styles.actionSubtitle}>Run VQE vs exact benchmark</Text>
+          <Text style={styles.actionSubtitle}>Run VQE vs exact solver</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -132,25 +159,34 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
         >
           <Text style={styles.actionIcon}>⚖️</Text>
           <Text style={styles.actionTitle}>Fluorine Balance</Text>
-          <Text style={styles.actionSubtitle}>Calculate mass balance closure</Text>
+          <Text style={styles.actionSubtitle}>Closure & deficit audit</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => onNavigate('evidence')}
+          onPress={() => onNavigate('literature')}
         >
-          <Text style={styles.actionIcon}>📚</Text>
-          <Text style={styles.actionTitle}>PFAS Evidence</Text>
-          <Text style={styles.actionSubtitle}>Explore peer-reviewed data</Text>
+          <Text style={styles.actionIcon}>📖</Text>
+          <Text style={styles.actionTitle}>Literature Assistant</Text>
+          <Text style={styles.actionSubtitle}>Grounded research Q&A</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => onNavigate('insights')}
+          onPress={() => onNavigate('experiments')}
+        >
+          <Text style={styles.actionIcon}>📋</Text>
+          <Text style={styles.actionTitle}>Experiment Planner</Text>
+          <Text style={styles.actionSubtitle}>Uncertainty reduction protocols</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onNavigate('recommendations')}
         >
           <Text style={styles.actionIcon}>💡</Text>
-          <Text style={styles.actionTitle}>Action Insights</Text>
-          <Text style={styles.actionSubtitle}>Rule-based decision support</Text>
+          <Text style={styles.actionTitle}>Recommendations</Text>
+          <Text style={styles.actionSubtitle}>Explainable catalyst priority</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

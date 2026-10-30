@@ -12,57 +12,99 @@ interface StepInfo {
 
 const STEP_FLOW: Record<TabKey, StepInfo> = {
   overview: {
-    nextTab: 'fluorine',
-    nextLabel: 'Audit Fluorine Mass Balance (Stage 1)',
+    nextTab: 'pfas',
+    nextLabel: 'Explore PFAS Compound Library',
     milestoneTitle: 'Research Target Defined: PFOA C-F Cleavage (~485 kJ/mol)'
   },
-  fluorine: {
+  pfas: {
     prevTab: 'overview',
-    prevLabel: 'Overview & Governance',
-    nextTab: 'pathways',
-    nextLabel: 'Explore Elementary Pathways (Stage 2A)',
-    milestoneTitle: 'Mass Balance & Volatile Deficit Closed (90% – 105%)'
+    prevLabel: 'Executive Overview',
+    nextTab: 'literature',
+    nextLabel: 'Query Literature Evidence',
+    milestoneTitle: 'PFAS Compound Catalog & Structural SMILES Audited'
   },
-  pathways: {
-    prevTab: 'fluorine',
-    prevLabel: 'Mass Balance Audit',
+  literature: {
+    prevTab: 'pfas',
+    prevLabel: 'PFAS Library',
     nextTab: 'chemistry',
-    nextLabel: 'Execute Ab-Initio SCF Engine (Stage 2B)',
-    milestoneTitle: 'Degradation Intermediates & Radical Cleavage Mapped'
+    nextLabel: 'Execute Ab-Initio Chemistry Solver',
+    milestoneTitle: 'Peer-Reviewed Claims & Passages Vectorized'
   },
   chemistry: {
-    prevTab: 'pathways',
-    prevLabel: 'Reaction Pathways',
+    prevTab: 'literature',
+    prevLabel: 'Literature Workspace',
     nextTab: 'quantum',
-    nextLabel: 'Launch Quantum VQE Workbench (Stage 2C)',
+    nextLabel: 'Launch Quantum VQE Workbench',
     milestoneTitle: 'RHF/STO-3G Ground State & ΔE_rxn Solved'
   },
   quantum: {
     prevTab: 'chemistry',
     prevLabel: 'Ab-Initio SCF Chemistry',
-    nextTab: 'catalysts',
-    nextLabel: 'Screen Audited Catalysts (Stage 3A)',
+    nextTab: 'pathways',
+    nextLabel: 'Inspect Elementary Pathways',
     milestoneTitle: '2-Qubit Active-Space Ground State Converged via VQE'
   },
-  catalysts: {
+  pathways: {
     prevTab: 'quantum',
     prevLabel: 'Quantum VQE Workbench',
-    nextTab: 'prioritization',
-    nextLabel: 'Evaluate 10-D Decision Engine (Stage 3B)',
+    nextTab: 'catalysts',
+    nextLabel: 'Screen Catalyst Intelligence',
+    milestoneTitle: 'Degradation Intermediates & Radical Cleavage Mapped'
+  },
+  catalysts: {
+    prevTab: 'pathways',
+    prevLabel: 'Reaction Pathways',
+    nextTab: 'fluorine',
+    nextLabel: 'Audit Fluorine Mass Balance',
     milestoneTitle: '5 Primary Catalyst Literature Systems Audited'
   },
-  prioritization: {
+  fluorine: {
     prevTab: 'catalysts',
-    prevLabel: 'Catalyst Catalogue & Matrix',
-    nextTab: 'evidence',
-    nextLabel: 'Compile Publication PDF Dossier (Stage 4)',
+    prevLabel: 'Catalyst Explorer',
+    nextTab: 'prioritization',
+    nextLabel: 'Evaluate 10-D Decision Engine',
+    milestoneTitle: 'Mass Balance & Volatile Deficit Closed (90% – 105%)'
+  },
+  prioritization: {
+    prevTab: 'fluorine',
+    prevLabel: 'Fluorine Balance Audit',
+    nextTab: 'experiments',
+    nextLabel: 'Plan Laboratory Protocols',
     milestoneTitle: 'Candidates Ranked with Defluorination Penalty Enforced'
+  },
+  experiments: {
+    prevTab: 'prioritization',
+    prevLabel: '10-D Prioritization',
+    nextTab: 'recommendations',
+    nextLabel: 'Review Explainable Recommendations',
+    milestoneTitle: 'Batch Protocols Formulated with Matrix & Dark Controls'
+  },
+  recommendations: {
+    prevTab: 'experiments',
+    prevLabel: 'Experiment Planner',
+    nextTab: 'reports',
+    nextLabel: 'Compile PDF Dossiers & Reports',
+    milestoneTitle: 'Catalyst Hierarchy Synthesized with Defluorination Penalty'
+  },
+  reports: {
+    prevTab: 'recommendations',
+    prevLabel: 'Recommendations Engine',
+    nextTab: 'settings',
+    nextLabel: 'Audit Environment & Backups',
+    milestoneTitle: 'ReportLab PDF & CSV Scientific Dossiers Exported'
+  },
+  settings: {
+    prevTab: 'reports',
+    prevLabel: 'Projects & Reports',
+    nextTab: 'overview',
+    nextLabel: 'Return to Executive Dashboard',
+    milestoneTitle: 'Local Python Virtual Environment & SQLite Snapshot Verified'
   },
   evidence: {
     prevTab: 'prioritization',
-    prevLabel: '10-D Prioritization Engine',
-    nextTab: 'overview',
-    nextLabel: 'Restart Research Workflow',
+    prevLabel: '10-D Prioritization',
+    nextTab: 'reports',
+    nextLabel: 'View Projects & Reports',
     milestoneTitle: 'Synthesis Dossiers Compiled & Research Advisor Active'
   }
 };

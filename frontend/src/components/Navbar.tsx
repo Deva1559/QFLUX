@@ -1,5 +1,7 @@
 import React from 'react';
-import { Atom, Database, Menu, X } from 'lucide-react';
+import { Atom, Database, Menu, X, LogIn, LogOut, User, UserPlus, Sun, Moon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
   apiOnline: boolean;
@@ -18,6 +20,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleMobileMenu,
   mobileMenuOpen
 }) => {
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   return (
     <header className="navbar-header">
       {/* Brand Identity & Mobile Hamburger */}
@@ -111,6 +115,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
+        {/* Theme Toggle (Light / Dark Mode) */}
+        <button
+          onClick={toggleTheme}
+          className="btn btn-secondary"
+          style={{ padding: '6px 10px', fontSize: '0.75rem', gap: '5px' }}
+          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+          aria-label="Toggle visual theme"
+        >
+          {theme === 'light' ? (
+            <>
+              <Moon size={14} color="#6366F1" />
+              <span className="btn-text-full">Dark</span>
+            </>
+          ) : (
+            <>
+              <Sun size={14} color="#F59E0B" />
+              <span className="btn-text-full">Light</span>
+            </>
+          )}
+        </button>
+
         {/* Repository Sync Trigger */}
         <button
           onClick={onTriggerSeed}
@@ -122,6 +147,82 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Database size={13} className={seeding ? 'spin-slow' : ''} />
           <span className="btn-text-full">{seeding ? 'Synchronizing...' : 'Sync Repository'}</span>
         </button>
+
+        {/* Authentication Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '4px' }}>
+          {isAuthenticated && user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '4px 10px 4px 6px',
+                  borderRadius: '20px',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0284C7',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 700
+                  }}
+                >
+                  {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                    {user.full_name}
+                  </span>
+                  <span style={{ fontSize: '0.64rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={logout}
+                className="btn btn-secondary"
+                style={{ padding: '6px 10px', fontSize: '0.74rem', gap: '5px', color: '#BE123C' }}
+                title="Sign out of current research session"
+              >
+                <LogOut size={13} />
+                <span className="btn-text-full">Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={() => openAuthModal('login')}
+                className="btn btn-secondary"
+                style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '5px' }}
+                title="Sign in with research credentials"
+              >
+                <LogIn size={13} />
+                <span>Sign In</span>
+              </button>
+
+              <button
+                onClick={() => openAuthModal('register')}
+                className="btn btn-primary"
+                style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '5px' }}
+                title="Create a new research collaborator account"
+              >
+                <UserPlus size={13} />
+                <span className="btn-text-full">Register</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -126,7 +126,10 @@ class CatalystPrioritizationEngine:
             "is_rankable": is_rankable,
             "missing_defluorination_penalty_applied": not is_rankable,
             "primary_rationale": " | ".join(notes) if notes else f"{category} based on multi-criteria analysis.",
-            "limitations": cat.known_limitations or "No major limitations documented in primary study.",
+            "data_coverage_pct": round(completeness_score * 100.0, 1),
+            "evidence_status": "HYPOTHETICAL" if cat.verification_status == "Hypothetical candidate" else ("LITERATURE_REPORTED" if cat.verification_status == "Verified against primary literature" else "UNKNOWN"),
+            "verification_status": cat.verification_status,
+            "weights_used": weights,
             "dimension_scores": {
                 "parent_removal": round(parent_score * 100, 1),
                 "defluorination": round(defluor_score * 100, 1),

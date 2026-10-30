@@ -2,19 +2,22 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 
 export type ScreenTab =
-  | 'overview'
-  | 'catalysts'
-  | 'compare'
-  | 'chemistry'
-  | 'prioritization'
-  | 'quantum'
-  | 'fluorine'
-  | 'pathway'
-  | 'evidence'
-  | 'projects'
-  | 'insights'
-  | 'reports'
-  | 'settings';
+  | 'overview'        // 1. Dashboard
+  | 'pfas'            // 2. PFAS Library
+  | 'literature'      // 3. Literature Workspace
+  | 'catalysts'       // 4. Catalyst Explorer
+  | 'compare'         // Catalyst sub-view: Side-by-side comparison
+  | 'prioritization'  // Catalyst sub-view: 10-D Multi-criteria Prioritization
+  | 'chemistry'       // 5. Molecular Chemistry Lab
+  | 'quantum'         // 6. Quantum Benchmark Lab
+  | 'fluorine'        // 7. Fluorine Balance
+  | 'pathway'         // Elementary reaction pathways
+  | 'experiments'     // 8. Experiment Planner
+  | 'recommendations' // 9. Recommendations
+  | 'projects'        // 10. Projects & Reports
+  | 'reports'         // Publication reports sub-view
+  | 'evidence'        // Verified literature evidence
+  | 'settings';       // 11. Settings
 
 interface TabBarProps {
   currentTab: ScreenTab;
@@ -28,18 +31,16 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: 'overview', label: 'Overview', icon: '📊' },
-  { key: 'catalysts', label: 'Catalysts', icon: '⚗️' },
-  { key: 'compare', label: 'Comparison', icon: '⚖️' },
-  { key: 'chemistry', label: 'Molecular SCF', icon: '🔬' },
-  { key: 'prioritization', label: 'Prioritization', icon: '🎯' },
+  { key: 'overview', label: 'Dashboard', icon: '📊' },
+  { key: 'pfas', label: 'PFAS Library', icon: '🧬' },
+  { key: 'literature', label: 'Literature Workspace', icon: '📖' },
+  { key: 'catalysts', label: 'Catalyst Explorer', icon: '⚗️' },
+  { key: 'chemistry', label: 'Molecular Lab', icon: '🔬' },
   { key: 'quantum', label: 'Quantum VQE', icon: '⚛️' },
   { key: 'fluorine', label: 'Fluorine Balance', icon: '🧪' },
-  { key: 'pathway', label: 'Pathways', icon: '🧬' },
-  { key: 'evidence', label: 'Evidence', icon: '📚' },
-  { key: 'projects', label: 'Projects', icon: '📁' },
-  { key: 'insights', label: 'Advisor', icon: '💡' },
-  { key: 'reports', label: 'Reports', icon: '📑' },
+  { key: 'experiments', label: 'Experiment Planner', icon: '📋' },
+  { key: 'recommendations', label: 'Recommendations', icon: '💡' },
+  { key: 'projects', label: 'Projects & Reports', icon: '📁' },
   { key: 'settings', label: 'Settings', icon: '⚙️' }
 ];
 

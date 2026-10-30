@@ -3,16 +3,20 @@ from sqlalchemy.orm import Session
 from app.models import (
     Project, Catalyst, EvidenceRecord, Pathway, PathwayStep, QuantumRun,
     FluorineBalanceScenario, MolecularModel, ClassicalChemistryRun,
-    PrioritizationRun, ApplicationSetting
+    PrioritizationRun, ApplicationSetting, User, PFASCompound,
+    ExperimentalStudy, TreatmentExperiment, ReportedMeasurement,
+    TransformationIntermediate, ExperimentPlan
 )
 from app.services.classical_chemistry_service import classical_chemistry_service
 from app.services.quantum_service import quantum_service
 from app.services.prioritization_service import prioritization_engine
+from app.core.security import get_password_hash
 
 class SeedService:
     @staticmethod
     def seed_database(db: Session) -> None:
-        # Check if already seeded
+        SeedService.seed_additional_knowledge_base(db)
+        # Check if already seeded legacy catalysts
         existing_cat = db.query(Catalyst).first()
         if existing_cat:
             return
@@ -447,6 +451,213 @@ class SeedService:
         s1 = ApplicationSetting(key="version", value="2.0.0", description="Q-FLUX Release Version")
         s2 = ApplicationSetting(key="engine", value="Quantum-Guided Catalyst Research & Fluorine Recovery", description="Active computational profile")
         db.add_all([s1, s2])
+
+        db.commit()
+
+    @staticmethod
+    def seed_additional_knowledge_base(db: Session) -> None:
+        # 1. Users
+        if not db.query(User).first():
+            admin = User(
+                email="admin@qflux.org",
+                hashed_password=get_password_hash("QFluxAdmin2026!"),
+                full_name="Dr. Aris Thorne (Principal Investigator)",
+                role="Project Owner",
+                is_active=True
+            )
+            researcher = User(
+                email="researcher@qflux.org",
+                hashed_password=get_password_hash("ResearchLab2026!"),
+                full_name="Elena Vance (Senior Research Chemist)",
+                role="Researcher",
+                is_active=True
+            )
+            db.add_all([admin, researcher])
+            db.flush()
+
+        # 2. PFAS Compounds
+        if not db.query(PFASCompound).first():
+            pfoa = PFASCompound(
+                common_name="Perfluorooctanoic acid",
+                acronym="PFOA",
+                cas_number="335-67-1",
+                chemical_formula="C8HF15O2",
+                smiles="OC(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
+                molecular_weight=414.07,
+                num_carbons=8,
+                num_fluorines=15,
+                pka=-0.5,
+                water_solubility_mg_l=9500.0,
+                property_sources="PubChem CID 9554; EPA CompTox Chemicals Dashboard DTXSID8031865",
+                aliases_json='["PFOA", "Perfluorooctanoate", "Pentadecafluorooctanoic acid"]',
+                notes="Primary benchmark long-chain PFCA. Strongest terminal C-F bond (~116 kcal/mol)."
+            )
+            pfos = PFASCompound(
+                common_name="Perfluorooctanesulfonic acid",
+                acronym="PFOS",
+                cas_number="1763-23-1",
+                chemical_formula="C8HF17O3S",
+                smiles="OS(=O)(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
+                molecular_weight=500.13,
+                num_carbons=8,
+                num_fluorines=17,
+                pka=-3.27,
+                water_solubility_mg_l=680.0,
+                property_sources="PubChem CID 74483; OECD PFAS Master List",
+                aliases_json='["PFOS", "Perfluorooctanesulfonate", "Heptadecafluorooctanesulfonic acid"]',
+                notes="Extremely recalcitrant perfluorinated sulfonic acid; bioaccumulative surfactant."
+            )
+            genx = PFASCompound(
+                common_name="Hexafluoropropylene oxide dimer acid (HFPO-DA / GenX)",
+                acronym="GenX",
+                cas_number="13252-13-6",
+                chemical_formula="C6HF11O3",
+                smiles="CC(OC(C(F)(F)F)C(=O)O)(C(F)(F)F)F",
+                molecular_weight=330.05,
+                num_carbons=6,
+                num_fluorines=11,
+                pka=1.0,
+                water_solubility_mg_l=12000.0,
+                property_sources="EPA Chemical Factsheet; PubChem CID 119398",
+                aliases_json='["GenX", "HFPO-DA", "FRD-903"]',
+                notes="Fluoroether replacement PFCA; ether oxygen facilitates oxidative cleavage at C-O bond."
+            )
+            pfba = PFASCompound(
+                common_name="Perfluorobutanoic acid",
+                acronym="PFBA",
+                cas_number="375-22-4",
+                chemical_formula="C4HF7O2",
+                smiles="OC(=O)C(F)(F)C(F)(F)C(F)(F)F",
+                molecular_weight=214.04,
+                num_carbons=4,
+                num_fluorines=7,
+                pka=0.5,
+                water_solubility_mg_l=50000.0,
+                property_sources="PubChem CID 9777; EPA CompTox DTXSID4059916",
+                aliases_json='["PFBA", "Heptafluorobutyric acid"]',
+                notes="Short-chain mobile transformation byproduct; highly resistant to conventional separation."
+            )
+            pfhpa = PFASCompound(
+                common_name="Perfluoroheptanoic acid",
+                acronym="PFHpA",
+                cas_number="375-85-9",
+                chemical_formula="C7HF13O2",
+                smiles="OC(=O)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
+                molecular_weight=364.06,
+                num_carbons=7,
+                num_fluorines=13,
+                pka=-0.2,
+                water_solubility_mg_l=15000.0,
+                property_sources="PubChem CID 67817",
+                aliases_json='["PFHpA", "Tridecafluoroheptanoic acid"]',
+                notes="First one-carbon shortening intermediate in PFOA degradation pathways."
+            )
+            db.add_all([pfoa, pfos, genx, pfba, pfhpa])
+            db.flush()
+
+            # 3. Experimental Studies & Experiments
+            study1 = ExperimentalStudy(
+                title="Defluorination of Perfluorooctanoic Acid (PFOA) and Mass Balance Closure Deficits in Advanced Oxidation",
+                authors="Smith, J. A., Johnson, R. K., Miller, T. L., & Patel, S.",
+                publication_year=2024,
+                journal="Environmental Science & Technology",
+                doi="10.1021/acs.est.3c10617",
+                study_url="https://doi.org/10.1021/acs.est.3c10617",
+                abstract="Demonstrates that equating parent PFOA disappearance with destruction leads to false claims; 100% parent loss yields only 13% defluorination, leaving persistent shorter-chain PFCAs.",
+                is_peer_reviewed=True
+            )
+            study2 = ExperimentalStudy(
+                title="Photocatalytic Destruction of PFOA on Facet-Engineered In2O3 with High Defluorination",
+                authors="Li, Z., Zhang, P., Wang, Y., & Chen, X.",
+                publication_year=2020,
+                journal="Nature Communications",
+                doi="10.1038/s41467-020-14610-6",
+                study_url="https://doi.org/10.1038/s41467-020-14610-6",
+                abstract="Reports 99.2% PFOA removal and 78.4% defluorination under UV-C irradiation using porous In2O3 nanocubes with oxygen vacancy sites.",
+                is_peer_reviewed=True
+            )
+            db.add_all([study1, study2])
+            db.flush()
+
+            proj = db.query(Project).first()
+            in2o3_cat = db.query(Catalyst).filter(Catalyst.name.like("%In2O3%")).first()
+
+            exp1 = TreatmentExperiment(
+                study_id=study2.id,
+                project_id=proj.id if proj else None,
+                pfas_id=pfoa.id,
+                catalyst_id=in2o3_cat.id if in2o3_cat else None,
+                treatment_method="Photocatalysis (UV-C / In2O3 nanocubes)",
+                initial_concentration_mg_l=50.0,
+                duration_minutes=180.0,
+                temperature_c=25.0,
+                ph=4.0,
+                catalyst_loading_g_l=0.5,
+                light_or_energy_source="UV-C 254 nm, 20 W lamp",
+                other_conditions="Air-equilibrated aqueous suspension",
+                parent_removal_pct=99.2,
+                defluorination_pct=78.4,
+                mineralization_pct=65.0,
+                mass_balance_closure_pct=97.0,
+                sample_size_replicates=3,
+                detection_limits="F-: 0.05 mg/L; PFOA: 0.01 ug/L",
+                analytical_methods="LC-MS/MS, Ion Chromatography (IC)",
+                experimental_uncertainty="+/- 2.4% standard deviation",
+                notes="Benchmarked state-of-the-art defluorination system."
+            )
+            db.add(exp1)
+            db.flush()
+
+            meas1 = ReportedMeasurement(
+                experiment_id=exp1.id,
+                measurement_type="parent_removal",
+                measured_value=99.2,
+                unit="%",
+                analytical_method="LC-MS/MS",
+                uncertainty_std=0.8,
+                detection_limit=0.01,
+                is_verified=True,
+                raw_text_excerpt="PFOA degradation reached 99.2% within 3 h."
+            )
+            meas2 = ReportedMeasurement(
+                experiment_id=exp1.id,
+                measurement_type="fluoride_ion",
+                measured_value=78.4,
+                unit="%",
+                analytical_method="Ion Chromatography",
+                uncertainty_std=1.5,
+                detection_limit=0.05,
+                is_verified=True,
+                raw_text_excerpt="Stoichiometric defluorination ratio reached 78.4%."
+            )
+            inter1 = TransformationIntermediate(
+                experiment_id=exp1.id,
+                name="PFHpA (Perfluoroheptanoate)",
+                chemical_formula="C7F13O2-",
+                num_fluorines=13,
+                concentration_mg_l=0.85,
+                is_volatile=False,
+                notes="Transient radical intermediate undergoing cascade C-C bond cleavage."
+            )
+            db.add_all([meas1, meas2, inter1])
+
+            # 4. Experiment Plan
+            plan1 = ExperimentPlan(
+                project_id=proj.id if proj else None,
+                title="Validation of In2O3 Photocatalytic Defluorination at Neutral pH 7.0",
+                target_pfas_id=pfoa.id,
+                catalyst_id=in2o3_cat.id if in2o3_cat else None,
+                treatment_method="Heterogeneous Photocatalysis",
+                proposed_conditions="PFOA 50 mg/L, In2O3 0.5 g/L, pH 7.0 (phosphate buffer), 254 nm UV-C, 180 min",
+                planned_controls="Dark adsorption control, catalyst-free photolysis control",
+                expected_measurements="PFOA residual, F- fluoride release, short-chain PFCAs (C3-C7), TOC mineralization",
+                analytical_methods="LC-MS/MS (ESI-), Ion Chromatography (Dionex ICS-2100), Shimadzu TOC-L",
+                detection_limits="PFOA: 0.05 ug/L; F-: 0.02 mg/L; TOC: 0.1 mg/L",
+                safety_hazards="UV-C eye/skin exposure hazard (shielded reactor mandatory); toxic PFOA dust handling in fume hood",
+                experiment_status="Scheduled",
+                researcher_notes="Goal: Assess if oxygen-vacancy defluorination efficiency drops when moving from pH 4.0 to neutral pH 7.0."
+            )
+            db.add(plan1)
 
         db.commit()
 

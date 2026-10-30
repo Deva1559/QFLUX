@@ -15,7 +15,15 @@ import {
   MolecularModel,
   ClassicalChemistryRunRequest,
   ClassicalChemistryRunResponse,
-  PrioritizationRunResponse
+  PrioritizationRunResponse,
+  PFASCompound,
+  UploadedDocument,
+  CandidateClaim,
+  LiteratureQueryResponse,
+  CSVImportPreviewResponse,
+  ExperimentPlan,
+  RecommendationItem,
+  CalculationJob
 } from '../types';
 
 let customBaseUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000';
@@ -26,15 +34,30 @@ export const setApiBaseUrl = (url: string) => {
 
 export const getApiBaseUrl = () => customBaseUrl;
 
+export const getStoredToken = (): string | null => {
+  try {
+    return localStorage.getItem('qflux_auth_token') || localStorage.getItem('qflux_token');
+  } catch {
+    return null;
+  }
+};
+
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
   const url = `${customBaseUrl}/api/v1${path}`;
+  const token = getStoredToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options?.headers as Record<string, string> || {})
+  };
+
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(options?.headers || {})
-    }
+    headers
   });
 
   if (!response.ok) {
@@ -44,7 +67,10 @@ const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
       if (errJson.detail) {
         errorDetail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
       }
-    } catch (_) {}
+    } catch (_) { }
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('qflux:unauthorized', { detail: errorDetail }));
+    }
     throw new Error(errorDetail);
   }
 
@@ -145,5 +171,158 @@ export const api = {
   getReports: (projectId?: number) =>
     request<ReportItem[]>(`/reports${projectId ? `?project_id=${projectId}` : ''}`),
   getReportDownloadUrl: (reportId: number) =>
-    `${customBaseUrl}/api/v1/reports/${reportId}/download`
+    `${customBaseUrl}/api/v1/reports/${reportId}/download`,
+  getReportCsvUrl: (projectId: number = 1) =>
+    `${customBaseUrl}/api/v1/reports/export/csv?project_id=${projectId}`,
+
+  // PFAS Knowledge Base (Enhancement 1)
+  getPFASCompounds: (search?: string, minCarbons?: number, maxCarbons?: number) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (minCarbons) params.append('min_carbons', String(minCarbons));
+    if (maxCarbons) params.append('max_carbons', String(maxCarbons));
+    const qs = params.toString();
+    return request<PFASCompound[]>(`/pfas${qs ? `?${qs}` : ''}`);
+  },
+  getPFASCompound: (id: number) => request<PFASCompound>(`/pfas/${id}`),
+  createPFASCompound: (data: Partial<PFASCompound>) =>
+    request<PFASCompound>('/pfas', { method: 'POST', body: JSON.stringify(data) }),
+  deletePFASCompound: (id: number) =>
+    request<{ status: string; message: string }>(`/pfas/${id}`, { method: 'DELETE' }),
+
+  // AI Literature Assistant (Enhancement 2)
+  getDocuments: (projectId?: number) =>
+    request<UploadedDocument[]>(`/literature/documents${projectId ? `?project_id=${projectId}` : ''}`),
+  getDocument: (id: number) =>
+    request<UploadedDocument>(`/literature/documents/${id}`),
+  uploadDocument: async (file: File, projectId?: number): Promise<UploadedDocument> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (projectId) formData.append('project_id', String(projectId));
+    const url = `${customBaseUrl}/api/v1/literature/upload`;
+    const token = getStoredToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { method: 'POST', body: formData, headers });
+    if (!res.ok) {
+      let msg = `Upload failed: ${res.statusText}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) msg = errJson.detail;
+      } catch (_) { }
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+  getLiteratureClaims: (params?: { document_id?: number; status?: string; claim_type?: string; limit?: number; offset?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.document_id) sp.append('document_id', String(params.document_id));
+    if (params?.status) sp.append('status', params.status);
+    if (params?.claim_type) sp.append('claim_type', params.claim_type);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    if (params?.offset) sp.append('offset', String(params.offset));
+    const qs = sp.toString();
+    return request<CandidateClaim[]>(`/literature/claims${qs ? `?${qs}` : ''}`);
+  },
+  getLiteratureClaim: (claimId: number) =>
+    request<CandidateClaim>(`/literature/claims/${claimId}`),
+  verifyClaim: (claimId: number, status: 'verified' | 'rejected', notes?: string) =>
+    request<CandidateClaim>(`/literature/claims/${claimId}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ verification_status: status, reviewer_notes: notes })
+    }),
+  queryLiterature: (query: string, targetPfas?: string) =>
+    request<LiteratureQueryResponse>('/literature/query', {
+      method: 'POST',
+      body: JSON.stringify({ query, target_pfas: targetPfas })
+    }),
+  getCsvTemplateUrl: () => `${customBaseUrl}/api/v1/literature/csv-template`,
+
+  // Experiment Planning (Enhancement 8)
+  getExperimentPlans: (projectId?: number, status?: string) => {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', String(projectId));
+    if (status) params.append('status', status);
+    const qs = params.toString();
+    return request<ExperimentPlan[]>(`/experiments/plans${qs ? `?${qs}` : ''}`);
+  },
+  createExperimentPlan: (data: Partial<ExperimentPlan>) =>
+    request<ExperimentPlan>('/experiments/plans', { method: 'POST', body: JSON.stringify(data) }),
+  importExperimentsCSV: async (file: File): Promise<CSVImportPreviewResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = `${customBaseUrl}/api/v1/experiments/import-csv`;
+    const token = getStoredToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { method: 'POST', body: formData, headers });
+    if (!res.ok) {
+      let msg = `CSV import failed: ${res.statusText}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) msg = errJson.detail;
+      } catch (_) { }
+      if (res.status === 401 && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('qflux:unauthorized', { detail: msg }));
+      }
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+  updateExperimentPlan: (id: number, data: Partial<ExperimentPlan>) =>
+    request<ExperimentPlan>(`/experiments/plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExperimentPlan: (id: number) =>
+    request<{ status: string; message: string }>(`/experiments/plans/${id}`, { method: 'DELETE' }),
+
+  // Transparent Recommendations (Enhancement 7)
+  getRecommendations: (targetPfas: string = 'PFOA', projectId?: number) => {
+    const params = new URLSearchParams();
+    params.append('target_pfas', targetPfas);
+    if (projectId) params.append('project_id', String(projectId));
+    return request<RecommendationItem[]>(`/recommendations?${params.toString()}`);
+  },
+
+  // Calculation Jobs (Enhancement 4 & 5)
+  getCalculationJobs: (projectId?: number, status?: string) => {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', String(projectId));
+    if (status) params.append('status', status);
+    const qs = params.toString();
+    return request<CalculationJob[]>(`/jobs${qs ? `?${qs}` : ''}`);
+  },
+  submitCalculationJob: (data: { job_type: 'scf_classical' | 'vqe_quantum'; input_params: Record<string, any>; project_id?: number }) =>
+    request<CalculationJob>('/jobs', { method: 'POST', body: JSON.stringify(data) }),
+  cancelCalculationJob: (jobId: number) =>
+    request<CalculationJob>(`/jobs/${jobId}/cancel`, { method: 'POST' }),
+
+  // Backup (Enhancement 9)
+  backupDatabase: () =>
+    request<{ status: string; backup_file: string; file_size_bytes: number; restore_instruction: string }>('/settings/backup', { method: 'POST' }),
+
+  // Authentication & Security (Enhancement 10)
+  setAuthToken: (token: string | null) => {
+    if (token) {
+      localStorage.setItem('qflux_auth_token', token);
+    } else {
+      localStorage.removeItem('qflux_auth_token');
+      localStorage.removeItem('qflux_token');
+    }
+  },
+  getAuthToken: () => getStoredToken(),
+  login: async (email: string, password: string) => {
+    const res = await request<{ access_token: string; token_type: string; user: any }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (res.access_token) {
+      api.setAuthToken(res.access_token);
+    }
+    return res;
+  },
+  register: (email: string, password: string, fullName: string, role?: string) =>
+    request<any>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, full_name: fullName, role: role || 'Researcher' })
+    }),
+  getCurrentUser: () => request<any>('/auth/me')
 };

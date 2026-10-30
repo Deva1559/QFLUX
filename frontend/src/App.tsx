@@ -11,10 +11,19 @@ import { PrioritizationView } from './views/PrioritizationView';
 import { FluorineBalanceView } from './views/FluorineBalanceView';
 import { PathwaysView } from './views/PathwaysView';
 import { EvidenceView } from './views/EvidenceView';
+import { PFASLibraryView } from './views/PFASLibraryView';
+import { LiteratureWorkspaceView } from './views/LiteratureWorkspaceView';
+import { ExperimentPlannerView } from './views/ExperimentPlannerView';
+import { RecommendationsView } from './views/RecommendationsView';
+import { ProjectsReportsView } from './views/ProjectsReportsView';
+import { SettingsView } from './views/SettingsView';
 import { ToastContainer, ToastMessage } from './components/Toast';
+import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { AuthModal } from './components/AuthModal';
 import { api } from './services/api';
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<TabKey>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [apiOnline, setApiOnline] = useState<boolean>(true);
@@ -66,16 +75,28 @@ export const App: React.FC = () => {
     switch (currentTab) {
       case 'overview':
         return <OverviewView onNavigate={handleSelectTab} />;
-      case 'fluorine':
-        return <FluorineBalanceView onNavigate={handleSelectTab} />;
-      case 'pathways':
-        return <PathwaysView onNavigate={handleSelectTab} />;
+      case 'pfas':
+        return <PFASLibraryView onNavigate={handleSelectTab} />;
+      case 'literature':
+        return <LiteratureWorkspaceView onNavigate={handleSelectTab} />;
+      case 'catalysts':
+        return <CatalystView onNavigate={handleSelectTab} />;
       case 'chemistry':
         return <ChemistryView onNavigate={handleSelectTab} />;
       case 'quantum':
         return <QuantumView onNavigate={handleSelectTab} />;
-      case 'catalysts':
-        return <CatalystView onNavigate={handleSelectTab} />;
+      case 'fluorine':
+        return <FluorineBalanceView onNavigate={handleSelectTab} />;
+      case 'experiments':
+        return <ExperimentPlannerView onNavigate={handleSelectTab} />;
+      case 'recommendations':
+        return <RecommendationsView onNavigate={handleSelectTab} />;
+      case 'reports':
+        return <ProjectsReportsView onNavigate={handleSelectTab} />;
+      case 'settings':
+        return <SettingsView />;
+      case 'pathways':
+        return <PathwaysView onNavigate={handleSelectTab} />;
       case 'prioritization':
         return <PrioritizationView onNavigate={handleSelectTab} />;
       case 'evidence':
@@ -115,12 +136,25 @@ export const App: React.FC = () => {
         <main className="page-container">
           <PipelineStepper currentTab={currentTab} onSelectTab={handleSelectTab} />
           <WarningBanner />
-          {renderActiveView()}
+          <div className="view-fade-in" key={currentTab}>
+            {renderActiveView()}
+          </div>
         </main>
       </div>
 
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
-    </div>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        <AuthModal />
+      </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

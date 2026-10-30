@@ -81,3 +81,19 @@ def download_report(report_id: int, db: Session = Depends(get_db)):
         filename=r.pdf_filename,
         media_type="application/pdf"
     )
+
+@router.get("/export/csv")
+def export_csv_report(project_id: int = 1, db: Session = Depends(get_db)):
+    """Exports full project scientific dossier as a structured CSV document."""
+    try:
+        csv_content = report_service.generate_csv_report(db=db, project_id=project_id)
+        from fastapi.responses import Response
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=q_flux_2_dossier_p{project_id}.csv"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV export: {str(e)}")

@@ -27,7 +27,9 @@ def list_evidence(
 
 @router.post("", response_model=EvidenceRecordResponse, status_code=status.HTTP_201_CREATED)
 def create_evidence(req: EvidenceRecordCreate, db: Session = Depends(get_db)):
-    record = EvidenceRecord(**req.model_dump())
+    req_data = req.model_dump()
+    req_data.pop("evidence_status", None)
+    record = EvidenceRecord(**req_data)
     db.add(record)
     db.commit()
     db.refresh(record)
@@ -47,7 +49,9 @@ def update_evidence(record_id: int, req: EvidenceRecordUpdate, db: Session = Dep
         raise HTTPException(status_code=404, detail="Evidence record not found")
     
     update_data = req.model_dump(exclude_unset=True)
+    update_data.pop("evidence_status", None)
     for field, val in update_data.items():
+        setattr(record, field, val)
         setattr(record, field, val)
     
     db.commit()

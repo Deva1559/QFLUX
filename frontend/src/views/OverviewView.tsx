@@ -48,7 +48,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ onNavigate }) => {
         className="glass-panel"
         style={{
           padding: 'clamp(20px, 4vw, 36px)',
-          background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(124, 58, 237, 0.04) 50%, #FFFFFF 100%)',
+          background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(124, 58, 237, 0.06) 50%, var(--bg-card) 100%)',
           position: 'relative',
           overflow: 'hidden',
           border: '1px solid var(--border-subtle)'
@@ -71,7 +71,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ onNavigate }) => {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             <button
-              onClick={() => onNavigate('fluorine')}
+              onClick={() => onNavigate('pfas')}
               className="btn btn-primary"
               style={{ padding: '11px 20px', fontSize: '0.92rem' }}
             >

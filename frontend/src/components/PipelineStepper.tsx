@@ -1,6 +1,6 @@
 import React from 'react';
 import { TabKey } from './Sidebar';
-import { Scale, Atom, Sliders, FileText, CheckCircle2, ArrowRight } from 'lucide-react';
+import { BookOpen, Atom, Sliders, FolderKanban, CheckCircle2, ArrowRight } from 'lucide-react';
 
 interface PipelineStepperProps {
   currentTab: TabKey;
@@ -19,46 +19,47 @@ export interface PipelineStage {
 export const PIPELINE_STAGES: PipelineStage[] = [
   {
     id: 1,
-    label: 'Stage 1: Forensic Audit',
-    subtitle: 'Mass Balance & Deficit',
-    icon: <Scale size={15} />,
-    primaryTab: 'fluorine',
-    tabs: ['overview', 'fluorine']
+    label: 'Stage 1: Knowledge & Literature',
+    subtitle: 'PFAS & Source Evidence',
+    icon: <BookOpen size={15} />,
+    primaryTab: 'pfas',
+    tabs: ['overview', 'pfas', 'literature']
   },
   {
     id: 2,
-    label: 'Stage 2: Quantum & SCF',
-    subtitle: 'Ab-Initio & VQE Lab',
+    label: 'Stage 2: Quantum & SCF Lab',
+    subtitle: 'Ab-Initio & VQE Benchmarks',
     icon: <Atom size={15} />,
     primaryTab: 'chemistry',
     tabs: ['pathways', 'chemistry', 'quantum']
   },
   {
     id: 3,
-    label: 'Stage 3: Catalyst Decision',
-    subtitle: '10-D MCDA Screening',
+    label: 'Stage 3: Catalysts & Audit',
+    subtitle: 'Forensic Balance & Deficit',
     icon: <Sliders size={15} />,
     primaryTab: 'catalysts',
-    tabs: ['catalysts', 'prioritization']
+    tabs: ['catalysts', 'fluorine', 'prioritization']
   },
   {
     id: 4,
-    label: 'Stage 4: Synthesis Dossier',
-    subtitle: 'PDF Reports & Advisor',
-    icon: <FileText size={15} />,
-    primaryTab: 'evidence',
-    tabs: ['evidence']
+    label: 'Stage 4: Execution & Reports',
+    subtitle: 'Protocols & PDF Dossiers',
+    icon: <FolderKanban size={15} />,
+    primaryTab: 'reports',
+    tabs: ['experiments', 'recommendations', 'reports', 'settings', 'evidence']
   }
 ];
 
 export const PipelineStepper: React.FC<PipelineStepperProps> = ({ currentTab, onSelectTab }) => {
   const currentStageIndex = PIPELINE_STAGES.findIndex((s) => s.tabs.includes(currentTab));
   const activeStage = currentStageIndex >= 0 ? PIPELINE_STAGES[currentStageIndex] : PIPELINE_STAGES[0];
+  const progressPct = Math.round(((currentStageIndex + 1) / PIPELINE_STAGES.length) * 100);
 
   return (
     <div
       style={{
-        background: '#FFFFFF',
+        background: 'var(--stepper-bg)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
         padding: '12px 16px',
@@ -81,8 +82,8 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ currentTab, on
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             color: 'var(--accent-cyan)',
-            background: '#F0F9FF',
-            border: '1px solid #BAE6FD',
+            background: 'rgba(8, 145, 178, 0.12)',
+            border: '1px solid rgba(8, 145, 178, 0.25)',
             padding: '3px 8px',
             borderRadius: '12px'
           }}
@@ -92,19 +93,31 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ currentTab, on
         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
           {activeStage.label}
         </span>
+        <span
+          style={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            color: 'var(--accent-emerald)',
+            background: 'rgba(5, 150, 105, 0.1)',
+            border: '1px solid rgba(5, 150, 105, 0.25)',
+            padding: '2px 7px',
+            borderRadius: '10px'
+          }}
+        >
+          {progressPct}%
+        </span>
       </div>
 
       {/* Stepper Bar */}
       <div
+        className="smooth-scroll-x"
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
           flex: '1 1 auto',
-          justifyContent: 'center',
-          overflowX: 'auto',
-          padding: '2px 0',
-          WebkitOverflowScrolling: 'touch'
+          justifyContent: 'flex-start',
+          padding: '2px 0'
         }}
       >
         {PIPELINE_STAGES.map((stage, idx) => {
@@ -122,19 +135,19 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ currentTab, on
                   padding: '6px 12px',
                   borderRadius: '20px',
                   background: isActive
-                    ? '#E0F2FE'
+                    ? 'rgba(8, 145, 178, 0.16)'
                     : isCompleted
-                    ? '#ECFDF5'
+                    ? 'rgba(5, 150, 105, 0.12)'
                     : 'var(--bg-surface)',
                   border: isActive
                     ? '1.5px solid var(--accent-cyan)'
                     : isCompleted
-                    ? '1px solid #A7F3D0'
+                    ? '1px solid rgba(5, 150, 105, 0.35)'
                     : '1px solid var(--border-subtle)',
                   color: isActive
                     ? 'var(--accent-cyan)'
                     : isCompleted
-                    ? '#059669'
+                    ? 'var(--accent-emerald)'
                     : 'var(--text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.76rem',

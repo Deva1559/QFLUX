@@ -300,3 +300,152 @@ export interface PrioritizationRunResponse {
   created_at: string;
 }
 
+// ================== Q-FLUX 2.0 PFAS Knowledge Base Types ==================
+export interface PFASCompound {
+  id: number;
+  common_name: string;
+  acronym: string;
+  cas_number?: string;
+  chemical_formula: string;
+  smiles?: string;
+  molecular_weight: number;
+  num_carbons: number;
+  num_fluorines: number;
+  pka?: number;
+  water_solubility_mg_l?: number;
+  property_sources?: string;
+  aliases_json?: string;
+  notes?: string;
+  created_at: string;
+}
+
+// ================== Q-FLUX 2.0 AI Literature Assistant Types ==================
+export interface CandidateClaim {
+  id: number;
+  document_id: number;
+  chunk_id?: number;
+  claim_type: string;
+  extracted_data_json: string;
+  verification_status: 'unverified' | 'verified' | 'rejected';
+  reviewer_notes?: string;
+  verified_by_id?: number;
+  verified_at?: string;
+  created_at: string;
+}
+
+export interface DocumentChunk {
+  id: number;
+  document_id: number;
+  chunk_index: number;
+  section_title?: string;
+  page_number?: number;
+  content: string;
+  created_at: string;
+}
+
+export interface UploadedDocument {
+  id: number;
+  project_id?: number;
+  filename: string;
+  file_size_bytes: number;
+  mime_type: string;
+  extraction_status: 'pending' | 'processing' | 'completed' | 'failed';
+  chunk_count: number;
+  created_at: string;
+  claims: CandidateClaim[];
+}
+
+export interface LiteratureSourceCitation {
+  document_title: string;
+  section_or_page: string;
+  doi_or_url?: string;
+  passage_excerpt: string;
+  relevance_score: number;
+}
+
+export interface LiteratureQueryResponse {
+  query: string;
+  answer: string;
+  citations: LiteratureSourceCitation[];
+  missing_evidence_statement?: string;
+  confidence_level: string;
+}
+
+export interface CSVImportPreviewRow {
+  row_number: number;
+  valid: boolean;
+  data: Record<string, any>;
+  errors: string[];
+}
+
+export interface CSVImportPreviewResponse {
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  headers: string[];
+  preview_rows: CSVImportPreviewRow[];
+}
+
+// ================== Q-FLUX 2.0 Experiment Planning Types ==================
+export interface ExperimentPlan {
+  id: number;
+  project_id?: number;
+  title: string;
+  target_pfas_id: number;
+  catalyst_id?: number;
+  treatment_method: string;
+  proposed_conditions: string;
+  planned_controls?: string;
+  expected_measurements?: string;
+  analytical_methods?: string;
+  detection_limits?: string;
+  safety_hazards?: string;
+  experiment_status: 'Draft' | 'Scheduled' | 'Completed' | 'Cancelled';
+  researcher_notes?: string;
+  created_at: string;
+}
+
+// ================== Q-FLUX 2.0 Recommendation Types ==================
+export interface RecommendationEvidenceItem {
+  catalyst_name: string;
+  treatment_method: string;
+  target_pfas: string;
+  reported_parent_removal_pct: number;
+  reported_defluorination_pct?: number;
+  byproduct_risk: string;
+  doi_or_url?: string;
+  evidence_category: string;
+}
+
+export interface RecommendationItem {
+  candidate_name: string;
+  target_pfas: string;
+  rank: number;
+  composite_score: number;
+  confidence_assessment: string;
+  defluorination_penalty_applied: boolean;
+  penalty_explanation: string;
+  supporting_evidence: RecommendationEvidenceItem[];
+  molecular_mechanistic_insights: string;
+  missing_measurements: string[];
+  potential_hazards: string[];
+  proposed_next_experiment: string;
+  conditions_under_which_recommendation_holds: string;
+}
+
+// ================== Q-FLUX 2.0 Calculation Jobs ==================
+export interface CalculationJob {
+  id: number;
+  project_id?: number;
+  job_type: 'scf_classical' | 'vqe_quantum';
+  status: 'Queued' | 'Running' | 'Completed' | 'Failed' | 'Cancelled';
+  progress_pct: number;
+  input_params_json: string;
+  output_results_json?: string;
+  log_output?: string;
+  error_message?: string;
+  runtime_seconds?: number;
+  created_at: string;
+  updated_at: string;
+}
+

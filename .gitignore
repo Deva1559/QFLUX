@@ -73,3 +73,7 @@ Thumbs.db
 backend/generated_reports/*.pdf
 !backend/generated_reports/.gitkeep
 
+# Backups and temporary uploads
+backups/
+backend/backups/
+backend/uploads/

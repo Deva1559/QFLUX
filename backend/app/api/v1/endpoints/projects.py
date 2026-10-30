@@ -4,11 +4,12 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models import (
     Project, Catalyst, EvidenceRecord, QuantumRun,
-    FluorineBalanceScenario, ClassicalChemistryRun, Report
+    FluorineBalanceScenario, ClassicalChemistryRun, Report, User
 )
 from app.schemas import (
     ProjectResponse, ProjectCreate, ProjectUpdate, ProjectOverviewStats
 )
+from app.api.v1.endpoints.auth import get_current_user, get_optional_current_user
 
 router = APIRouter()
 
@@ -17,8 +18,15 @@ def list_projects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     return db.query(Project).offset(skip).limit(limit).all()
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-def create_project(req: ProjectCreate, db: Session = Depends(get_db)):
-    project = Project(**req.model_dump())
+def create_project(
+    req: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    project_data = req.model_dump()
+    if current_user:
+        project_data["owner_id"] = current_user.id
+    project = Project(**project_data)
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -82,10 +90,29 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     return project
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
-def update_project(project_id: int, req: ProjectUpdate, db: Session = Depends(get_db)):
+def update_project(
+    project_id: int,
+    req: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Enforce ownership if project is owned
+    if project.owner_id is not None:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to modify this project.",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        if current_user.id != project.owner_id and current_user.role not in ["Admin", "Project Owner"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not have permission to modify this project."
+            )
     
     update_data = req.model_dump(exclude_unset=True)
     for field, val in update_data.items():
@@ -94,3 +121,31 @@ def update_project(project_id: int, req: ProjectUpdate, db: Session = Depends(ge
     db.commit()
     db.refresh(project)
     return project
+
+@router.delete("/{project_id}")
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id is not None:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to delete this project.",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        if current_user.id != project.owner_id and current_user.role not in ["Admin", "Project Owner"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not have permission to delete this project."
+            )
+
+    db.delete(project)
+    db.commit()
+    return {"status": "success", "message": f"Project '{project.title}' deleted."}
+

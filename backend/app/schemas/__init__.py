@@ -1,6 +1,19 @@
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
+
+class EvidenceStatus(str, Enum):
+    EXPERIMENTALLY_MEASURED = "EXPERIMENTALLY_MEASURED"
+    LITERATURE_REPORTED = "LITERATURE_REPORTED"
+    COMPUTED = "COMPUTED"
+    ML_PREDICTED = "ML_PREDICTED"
+    AI_EXTRACTED_UNVERIFIED = "AI_EXTRACTED_UNVERIFIED"
+    HYPOTHETICAL = "HYPOTHETICAL"
+    ILLUSTRATIVE = "ILLUSTRATIVE"
+    UNKNOWN = "UNKNOWN"
+    FAILED = "FAILED"
+    NOT_AVAILABLE = "NOT_AVAILABLE"
 
 # ----------------- Project Schemas -----------------
 class ProjectBase(BaseModel):
@@ -24,6 +37,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: int
+    owner_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -58,6 +72,7 @@ class CatalystBase(BaseModel):
     catalyst_stability_cycles: Optional[int] = None
     energy_intensity_kwh_m3: Optional[float] = None
     evidence_category: str = "Published experimental result"
+    evidence_status: Optional[str] = None
     doi_or_url: Optional[str] = None
     publication_citation: str
     known_limitations: Optional[str] = None
@@ -97,6 +112,7 @@ class MolecularModelCreate(MolecularModelBase):
 
 class MolecularModelResponse(MolecularModelBase):
     id: int
+    owner_id: Optional[int] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -128,6 +144,8 @@ class ClassicalChemistryRunResponse(BaseModel):
     runtime_ms: float
     software_version: str
     limitations: str
+    evidence_status: Optional[str] = "COMPUTED"
+    reference_literature_energy_au: Optional[float] = None
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,6 +166,7 @@ class EvidenceRecordBase(BaseModel):
     reaction_conditions: Optional[str] = None
     limitations: Optional[str] = None
     evidence_category: str = Field(default="Published experimental result")
+    evidence_status: Optional[str] = None
     verification_status: str = Field(default="Needs verification")
 
 class EvidenceRecordCreate(EvidenceRecordBase):
@@ -251,6 +270,8 @@ class QuantumBenchmarkResponse(BaseModel):
     optimal_parameters: List[float]
     software_versions: Dict[str, str]
     is_toy_model: bool
+    execution_backend: str = "STATEVECTOR_SIMULATOR (NumPy Classical Eigensolver)"
+    evidence_status: str = "COMPUTED"
     disclaimer_text: str
     classical_comparison_note: str
 
@@ -373,3 +394,251 @@ class ReportResponse(BaseModel):
     download_url: str
     generated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+# ----------------- Auth & User Schemas -----------------
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    role: Optional[str] = "Researcher"
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    role: str
+    is_active: bool
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+# ----------------- PFAS Knowledge Base Schemas -----------------
+class PFASCompoundBase(BaseModel):
+    common_name: str
+    acronym: str
+    cas_number: Optional[str] = None
+    chemical_formula: str
+    smiles: Optional[str] = None
+    molecular_weight: float
+    num_carbons: int
+    num_fluorines: int
+    pka: Optional[float] = None
+    water_solubility_mg_l: Optional[float] = None
+    property_sources: Optional[str] = None
+    aliases_json: Optional[str] = None
+    notes: Optional[str] = None
+
+class PFASCompoundCreate(PFASCompoundBase):
+    pass
+
+class PFASCompoundUpdate(BaseModel):
+    common_name: Optional[str] = None
+    acronym: Optional[str] = None
+    cas_number: Optional[str] = None
+    chemical_formula: Optional[str] = None
+    smiles: Optional[str] = None
+    molecular_weight: Optional[float] = None
+    num_carbons: Optional[int] = None
+    num_fluorines: Optional[int] = None
+    pka: Optional[float] = None
+    water_solubility_mg_l: Optional[float] = None
+    property_sources: Optional[str] = None
+    aliases_json: Optional[str] = None
+    notes: Optional[str] = None
+
+class PFASCompoundResponse(PFASCompoundBase):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ----------------- Literature & Evidence Assistant Schemas -----------------
+class DocumentChunkResponse(BaseModel):
+    id: int
+    document_id: int
+    chunk_index: int
+    section_title: Optional[str] = None
+    page_number: Optional[int] = None
+    content: str
+    extracted_entities_json: Optional[str] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class CandidateClaimResponse(BaseModel):
+    id: int
+    document_id: int
+    chunk_id: Optional[int] = None
+    claim_type: str
+    extracted_data_json: str
+    verification_status: str
+    reviewer_notes: Optional[str] = None
+    verified_by_id: Optional[int] = None
+    verified_at: Optional[datetime] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class ClaimVerifyRequest(BaseModel):
+    verification_status: str = Field(..., pattern="^(verified|rejected)$")
+    reviewer_notes: Optional[str] = None
+    edited_data: Optional[Dict[str, Any]] = None
+
+class UploadedDocumentResponse(BaseModel):
+    id: int
+    project_id: Optional[int] = None
+    filename: str
+    file_size_bytes: int
+    mime_type: str
+    extraction_status: str
+    chunk_count: int
+    created_at: datetime
+    claims: List[CandidateClaimResponse] = []
+    model_config = ConfigDict(from_attributes=True)
+
+class LiteratureQueryRequest(BaseModel):
+    query: str
+    target_pfas: Optional[str] = None
+    top_k: int = Field(default=5, ge=1, le=20)
+
+class LiteratureSourceCitation(BaseModel):
+    document_title: str
+    section_or_page: str
+    doi_or_url: Optional[str] = None
+    passage_excerpt: str
+    relevance_score: float
+
+class LiteratureQueryResponse(BaseModel):
+    query: str
+    answer: str
+    citations: List[LiteratureSourceCitation]
+    missing_evidence_statement: Optional[str] = None
+    confidence_level: str
+
+
+# ----------------- CSV Import Schemas -----------------
+class CSVImportPreviewRow(BaseModel):
+    row_number: int
+    valid: bool
+    data: Dict[str, Any]
+    errors: List[str]
+
+class CSVImportPreviewResponse(BaseModel):
+    total_rows: int
+    valid_rows: int
+    invalid_rows: int
+    headers: List[str]
+    preview_rows: List[CSVImportPreviewRow]
+
+class CSVImportExecuteRequest(BaseModel):
+    file_token: str
+    target_project_id: Optional[int] = None
+
+
+# ----------------- Calculation Job Schemas -----------------
+class CalculationJobCreate(BaseModel):
+    project_id: Optional[int] = None
+    job_type: str = Field(..., pattern="^(scf_classical|vqe_quantum)$")
+    input_params: Dict[str, Any]
+
+class CalculationJobResponse(BaseModel):
+    id: int
+    project_id: Optional[int] = None
+    user_id: Optional[int] = None
+    job_type: str
+    status: str
+    progress_pct: float
+    input_params_json: str
+    output_results_json: Optional[str] = None
+    log_output: Optional[str] = None
+    error_message: Optional[str] = None
+    runtime_seconds: Optional[float] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ----------------- Experiment Plan Schemas -----------------
+class ExperimentPlanCreate(BaseModel):
+    project_id: Optional[int] = None
+    title: str
+    target_pfas_id: int
+    catalyst_id: Optional[int] = None
+    treatment_method: str
+    proposed_conditions: str
+    planned_controls: Optional[str] = None
+    expected_measurements: Optional[str] = None
+    analytical_methods: Optional[str] = None
+    detection_limits: Optional[str] = None
+    safety_hazards: Optional[str] = None
+    experiment_status: Optional[str] = "Draft"
+    researcher_notes: Optional[str] = None
+
+class ExperimentPlanUpdate(BaseModel):
+    title: Optional[str] = None
+    target_pfas_id: Optional[int] = None
+    catalyst_id: Optional[int] = None
+    treatment_method: Optional[str] = None
+    proposed_conditions: Optional[str] = None
+    planned_controls: Optional[str] = None
+    expected_measurements: Optional[str] = None
+    analytical_methods: Optional[str] = None
+    detection_limits: Optional[str] = None
+    safety_hazards: Optional[str] = None
+    experiment_status: Optional[str] = None
+    researcher_notes: Optional[str] = None
+
+class ExperimentPlanResponse(BaseModel):
+    id: int
+    project_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    title: str
+    target_pfas_id: int
+    catalyst_id: Optional[int] = None
+    treatment_method: str
+    proposed_conditions: str
+    planned_controls: Optional[str] = None
+    expected_measurements: Optional[str] = None
+    analytical_methods: Optional[str] = None
+    detection_limits: Optional[str] = None
+    safety_hazards: Optional[str] = None
+    experiment_status: str
+    researcher_notes: Optional[str] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ----------------- Recommendation Schemas -----------------
+class RecommendationEvidenceItem(BaseModel):
+    catalyst_name: str
+    treatment_method: str
+    target_pfas: str
+    reported_parent_removal_pct: float
+    reported_defluorination_pct: Optional[float] = None
+    byproduct_risk: str
+    doi_or_url: Optional[str] = None
+    evidence_category: str
+    evidence_status: Optional[str] = None
+
+class RecommendationResponse(BaseModel):
+    candidate_name: str
+    target_pfas: str
+    rank: int
+    composite_score: float
+    confidence_assessment: str  # "High Confidence", "Moderate Confidence", "Preliminary / Data Gaps"
+    defluorination_penalty_applied: bool
+    penalty_explanation: str
+    supporting_evidence: List[RecommendationEvidenceItem]
+    molecular_mechanistic_insights: str
+    missing_measurements: List[str]
+    potential_hazards: List[str]
+    proposed_next_experiment: str
+    conditions_under_which_recommendation_holds: str
