@@ -5,7 +5,8 @@ from app.db.session import get_db
 from app.models import MolecularModel, ClassicalChemistryRun, User
 from app.schemas import (
     MolecularModelResponse, MolecularModelCreate,
-    ClassicalChemistryRunRequest, ClassicalChemistryRunResponse
+    ClassicalChemistryRunRequest, ClassicalChemistryRunResponse,
+    ReactionEnergyRequest, ReactionEnergyResponse
 )
 from app.services.classical_chemistry_service import classical_chemistry_service
 from app.api.v1.endpoints.auth import get_current_user, get_optional_current_user
@@ -157,3 +158,14 @@ def get_chemistry_run(run_id: int, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail="Chemistry run not found")
     return run
+
+@router.post("/reactions/calculate", response_model=ReactionEnergyResponse)
+def calculate_reaction_energy(req: ReactionEnergyRequest):
+    """Calculates thermodynamic reaction electronic energy change Delta E.
+    Verifies stoichiometric, elemental, and charge balance.
+    Explicitly refuses to infer kinetic activation barriers or Gibbs free energies."""
+    reactants_data = [r.model_dump() for r in req.reactants]
+    products_data = [p.model_dump() for p in req.products]
+    res = classical_chemistry_service.calculate_reaction_energy(reactants_data, products_data)
+    res["reaction_name"] = req.reaction_name
+    return res

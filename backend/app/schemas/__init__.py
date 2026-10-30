@@ -146,8 +146,41 @@ class ClassicalChemistryRunResponse(BaseModel):
     limitations: str
     evidence_status: Optional[str] = "COMPUTED"
     reference_literature_energy_au: Optional[float] = None
+    method_classification: Optional[str] = None
+    provenance: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+class ReactionComponent(BaseModel):
+    formula: str
+    coefficient: float = 1.0
+    energy_au: Optional[float] = None
+    charge: Optional[int] = 0
+    atoms: Optional[Dict[str, int]] = None
+
+class ReactionEnergyRequest(BaseModel):
+    reaction_name: Optional[str] = "PFAS Degradation Reaction"
+    reactants: List[ReactionComponent]
+    products: List[ReactionComponent]
+
+class ReactionEnergyResponse(BaseModel):
+    status: str
+    reaction_name: Optional[str] = None
+    reactant_total_au: Optional[float] = None
+    product_total_au: Optional[float] = None
+    delta_e_hartree: Optional[float] = None
+    delta_e_kcal_mol: Optional[float] = None
+    is_exothermic: Optional[bool] = None
+    elemental_balance_verified: bool
+    charge_balance_verified: bool
+    balance_notes: List[str] = []
+    unavailability_reason: Optional[str] = None
+    electronic_energy_change_au: Optional[float] = None
+    zero_point_corrected_energy: str
+    enthalpy: str
+    gibbs_free_energy: str
+    activation_energy: str
+    convention_note: Optional[str] = None
 
 # ----------------- Evidence Schemas -----------------
 class EvidenceRecordBase(BaseModel):

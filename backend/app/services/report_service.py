@@ -213,18 +213,20 @@ class ReportGeneratorService:
         # 5. Classical Electronic Structure Outputs
         story.append(Paragraph("4. PFAS Classical Electronic-Structure Runs", h1_style))
         if chem_runs:
-            cr = chem_runs[0]
-            rxn_display = f"<b>Reaction Energetics:</b> {cr.reaction_name}: <b>ΔE = {cr.reaction_energy_kcal_mol:.2f} kcal/mol</b><br/>" if cr.reaction_energy_kcal_mol is not None else f"<b>Reaction Pathway:</b> {cr.reaction_name or 'Isolated Electronic Structure'} (ΔE unpopulated until product fragments computed)<br/>"
-            cr_text = (
-                f"<b>Model System:</b> {cr.run_name} | <b>Evidence Status:</b> COMPUTED<br/>"
-                f"<b>Method / Basis:</b> {cr.method_name} | <b>Nuclear Repulsion:</b> {cr.nuclear_repulsion_energy_au:.4f} a.u.<br/>"
-                f"<b>Total Electronic Energy:</b> {cr.electronic_energy_au:.4f} a.u. | <b>Total SCF Energy:</b> {cr.total_scf_energy_au:.6f} a.u.<br/>"
-                f"<b>HOMO:</b> {cr.homo_energy_ev:.2f} eV | <b>LUMO:</b> {cr.lumo_energy_ev:.2f} eV | <b>HOMO-LUMO Gap:</b> {cr.homo_lumo_gap_ev:.2f} eV<br/>"
-                f"{rxn_display}"
-                f"<b>Model Limitations & Scope:</b> {cr.limitations}"
-            )
-            story.append(Paragraph(cr_text, body_style))
-        story.append(Spacer(1, 6))
+            for cr in chem_runs[:2]:
+                rxn_display = f"<b>Reaction Energetics:</b> {cr.reaction_name}: <b>ΔE = {cr.reaction_energy_kcal_mol:.2f} kcal/mol</b><br/>" if cr.reaction_energy_kcal_mol is not None else f"<b>Reaction Pathway:</b> {cr.reaction_name or 'Isolated Electronic Structure'} (ΔE unpopulated until product fragments computed in identical basis)<br/>"
+                cr_text = (
+                    f"<b>Model System:</b> {cr.run_name} | <b>Evidence Status:</b> COMPUTED<br/>"
+                    f"<b>Method / Basis:</b> {cr.method_name} | <b>Nuclear Repulsion:</b> {cr.nuclear_repulsion_energy_au:.4f} a.u.<br/>"
+                    f"<b>Total Electronic Energy:</b> {cr.electronic_energy_au:.4f} a.u. | <b>Total SCF Energy:</b> {cr.total_scf_energy_au:.6f} a.u.<br/>"
+                    f"<b>HOMO:</b> {cr.homo_energy_ev:.2f} eV | <b>LUMO:</b> {cr.lumo_energy_ev:.2f} eV | <b>HOMO-LUMO Gap:</b> {cr.homo_lumo_gap_ev:.2f} eV<br/>"
+                    f"{rxn_display}"
+                    f"<b>Kinetic Note:</b> Transition-state activation barriers (Ea) and Gibbs free energies (ΔG) are NOT AVAILABLE. Negative ΔE does not guarantee low kinetic barrier.<br/>"
+                    f"<b>Model Scope & Limitations:</b> {cr.limitations}"
+                )
+                story.append(Paragraph(cr_text, body_style))
+                story.append(Spacer(1, 4))
+        story.append(Spacer(1, 4))
 
         # 6. Quantum VQE Benchmark Outputs
         story.append(Paragraph("5. Quantum Algorithm Workbench (VQE vs Exact Reference)", h1_style))
@@ -247,13 +249,18 @@ class ReportGeneratorService:
         story.append(Paragraph("6. Fluorine Mass-Balance Accounting", h1_style))
         if fluorine_scenarios:
             sc = fluorine_scenarios[0]
+            defluor_str = f"{sc.apparent_defluorination_pct:.1f}% Defluorination" if sc.apparent_defluorination_pct is not None else "UNMEASURED"
+            org_str = f"{sc.remaining_organic_pct:.1f}%" if sc.remaining_organic_pct is not None else "UNMEASURED"
+            closure_str = f"{sc.mass_balance_closure_pct:.1f}%" if sc.mass_balance_closure_pct is not None else "INCOMPLETE"
             sc_text = (
                 f"<b>Scenario:</b> {sc.scenario_name}<br/>"
                 f"<b>Initial F Inventory:</b> {sc.initial_fluorine_inventory} {sc.inventory_basis_units} | "
-                f"<b>Measured F-:</b> {sc.measured_inorganic_fluoride} {sc.inventory_basis_units} (<b>{sc.apparent_defluorination_pct:.1f}% Defluorination</b>)<br/>"
-                f"<b>Remaining Organofluorine:</b> {sc.remaining_organic_fluorine} {sc.inventory_basis_units} ({sc.remaining_organic_pct:.1f}%) | "
-                f"<b>Mass-Balance Closure:</b> <b>{sc.mass_balance_closure_pct:.1f}%</b> ({sc.closure_status})<br/>"
-                f"<b>Analytical Quality Notes:</b> {sc.uncertainty_flags or 'Closure within standard protocol.'}"
+                f"<b>Measured F-:</b> {sc.measured_inorganic_fluoride or 'N/A'} {sc.inventory_basis_units} (<b>{defluor_str}</b>)<br/>"
+                f"<b>Remaining Organofluorine:</b> {sc.remaining_organic_fluorine or 'N/A'} {sc.inventory_basis_units} ({org_str}) | "
+                f"<b>Mass-Balance Closure:</b> <b>{closure_str}</b> ({sc.closure_status})<br/>"
+                f"<b>Analytical Quality Notes:</b> {sc.uncertainty_flags or 'Closure within standard protocol.'}<br/>"
+                f"<b>Scientific Integrity Distinction:</b> Mass-balance closure measures conservation of fluorine atoms across measured fractions; "
+                f"it does NOT constitute carbon-backbone mineralization (complete oxidation of PFAS to CO2 and F-)."
             )
             story.append(Paragraph(sc_text, body_style))
         story.append(Spacer(1, 6))

@@ -1,4 +1,4 @@
-# Scientific Methodology & Computational Chemistry Governance — Q-FLUX 2.0
+# Scientific Methodology & Computational Chemistry Governance — Q-FLUX 2.0 (Phase B)
 
 ## 1. The Core Scientific Dilemma in PFAS Remediation
 
@@ -25,54 +25,34 @@ As demonstrated by **Smith et al. (2024)** (*Environmental Science & Technology*
 
 ---
 
-## 2. Real Ab-Initio Classical Electronic Structure (Core Module C)
+## 2. Classical Electronic Structure Engines & Methodological Integrity
 
-To avoid substituting toy models where real quantum chemistry is feasible, Q-FLUX 2.0 implements an ab-initio classical electronic structure engine operating on chemically validated Cartesian geometries:
+To prevent overstated computational claims, Q-FLUX 2.0 clearly distinguishes its underlying calculation methods:
 
-### 2.1 Feasible Molecular Models
-1. **$CF_3COO^-$ (Perfluoroacetate Anion):**
-   - 6 atoms: $C_1(0,0,0)$, $C_2(1.54,0,0)$, $O_1(2.10,1.08,0)$, $O_2(2.10,-1.08,0)$, $F_1(-0.52,1.08,0.76)$, $F_2(-0.52,-1.08,0.76)$, $F_3(-0.52,0,-1.33)$.
-   - 58 electrons, closed-shell singlet ($q = -1$, $2S+1 = 1$).
-   - Models the initial rate-determining single-electron transfer (SET) decarboxylation step in photocatalytic degradation:
-     $$CF_3COO^- + h_{vb}^+ \rightarrow CF_3\cdot + CO_2$$
-     $$\Delta E_{rxn} = -14.28\text{ kcal/mol (Thermodynamically Exergonic)}$$
+### 2.1 Native Ab-Initio Roothaan-Hall SCF Driver
+For s-basis molecular systems ($H_2$, $HeH^+$), Q-FLUX 2.0 implements an exact, closed-form analytical Gaussian integral Roothaan-Hall solver:
+- Contracted STO-3G basis functions: $\phi_\mu(\mathbf{r}) = \sum_p d_{p\mu} g_p(\mathbf{r})$
+- Analytical overlap integrals $S_{\mu\nu}$ and kinetic integrals $T_{\mu\nu}$.
+- Analytical electron-nuclear attraction $V_{\mu\nu}$ via the zeroth-order Boys function $F_0(t) = \frac{1}{2}\sqrt{\pi/t}\text{erf}(\sqrt{t})$.
+- Analytical 4-center two-electron repulsion tensor $(\mu\nu|\lambda\sigma)$ with 8-fold index permutation symmetry.
+- Validated against Szabo & Ostlund Table 3.3 for $H_2$ ($R = 1.400\text{ Bohr}$):
+  $$E_{tot} = -1.116714\text{ a.u. (error } < 10^{-4}\text{ a.u.)},\quad E_{nuc} = 0.714286\text{ a.u.},\quad E_{elec} = -1.8310\text{ a.u.}$$
 
-2. **$CH_3F$ (Fluoromethane):**
-   - 5 atoms: $C(0,0,0)$, $F(1.382,0,0)$, $H_1(-0.35,1.02,0)$, $H_2(-0.35,-0.51,0.89)$, $H_3(-0.35,-0.51,-0.89)$.
-   - 18 electrons, closed-shell singlet ($q=0$, $2S+1=1$).
-   - Models single-electron reductive C-F cleavage:
-     $$CH_3F + e^- \rightarrow \cdot CH_3 + F^-$$
-     $$\Delta E_{rxn} = -8.45\text{ kcal/mol}$$
-
-### 2.2 Classical Computation Quantities
-* **Exact Point-Charge Nuclear Repulsion:**
-  $$E_{nuc} = \sum_{A < B} \frac{Z_A Z_B}{R_{AB}}\text{ (a.u.)}$$
-* **Restricted Hartree-Fock (RHF) SCF:** STO-3G minimal basis iteration to convergence tolerance $10^{-6}\text{ a.u.}$, yielding total electronic energy $E_{elec}$ and ground-state $E_{tot} = E_{elec} + E_{nuc}$.
-* **Orbital Eigenvalues:** HOMO, LUMO, and fundamental HOMO-LUMO gap ($\Delta E_{gap} = \epsilon_{LUMO} - \epsilon_{HOMO}\text{ eV}$).
-* **Dipole Moment:** Molecular polarity in Debye.
+### 2.2 Semi-Empirical Frontier Model (Polyatomic Fragments)
+When full ab initio Cartesian Gaussian packages (such as PySCF) are not available, multi-atom fluorinated fragments ($CF_3COO^-$, $CH_3F$) are solved via an explicitly labeled Semi-Empirical Frontier Model:
+- Uses core binding energies and parameterized Wolfsberg-Helmholtz resonance integrals.
+- Uses distance-screened Coulomb interaction $G(P)$ for density-matrix iteration.
+- Explicitly labeled in output metadata as `SEMI_EMPIRICAL_APPROXIMATE` to prevent confusing it with full-integral ab initio calculations.
 
 ---
 
-## 3. Quantum-Classical Benchmarking (Core Module D)
+## 3. Reaction Energetics: $\Delta E$ vs Activation Barrier $E_a$
 
-Q-FLUX 2.0 supports two distinct quantum formulations:
+Reaction electronic energies are computed strictly as:
+$$\Delta E_{rxn} = \sum E_{products} - \sum E_{reactants}$$
 
-### 3.1 Reduced C-F Active Space (Molecular Model)
-* **Chemical Justification:** Terminal C-F single bond represented by its bonding ($\sigma_{C-F}$) and antibonding ($\sigma^*_{C-F}$) molecular orbitals with 2 active electrons.
-* **Fermionic to Qubit Mapping:** Via Jordan-Wigner transformation, mapped onto a 2-qubit Hamiltonian:
-  $$H_{CF} = -1.825(II) - 0.680(Z_0) - 0.440(Z_1) + 0.220(Z_0Z_1) + 0.185(X_0X_1) + 0.185(Y_0Y_1)$$
-* **Solvers:**
-  - Classical Exact Diagonalization: $E_{exact} = -2.716182\text{ a.u.}$
-  - Statevector VQE: $E_{vqe} = -2.716182\text{ a.u.}$ ($|\Delta E| < 10^{-6}\text{ a.u.}$)
-
-### 3.2 Pedagogical Toy Benchmark
-* Parametric 2-qubit matrix $H_{toy} = c_{z0}(Z_0) + c_{z1}(Z_1) + c_{xx}(XX) + c_{zz}(ZZ)$ used strictly to verify optimizer convergence (Nelder-Mead, COBYLA, BFGS).
-* Explicitly labeled: *"Demonstrates algorithm mechanics only; does NOT predict PFAS reaction chemistry."*
-
----
-
-## 4. Multi-Criteria Catalyst Prioritization (Core Module E)
-
-Prioritizes candidates across 10 evaluation dimensions with an explicit penalty for missing defluorination:
-$$\text{If Defluorination is MISSING: } S_k = \left( \sum_{i=1}^{10} w_i d_i \right) \times 0.60$$
-and sensitivity analysis under $\pm 20\%$ weight shifts.
+**Mandatory Scientific Governance Rules:**
+1. **No Inference of Activation Energy:** A negative reaction energy ($\Delta E < 0$, exothermic) indicates thermodynamic favorability of products relative to reactants under vacuum, but provides **zero information** on kinetic activation barriers ($E_a$) or reaction rates ($k$).
+2. **Missing Fragment Unavailability:** If electronic energies for any reactant or product fragment are uncomputed or missing, reaction energy is returned as `UNAVAILABLE` rather than fabricating values.
+3. **Stoichiometric and Charge Balance:** Elemental and charge balancing are strictly verified before calculating $\Delta E$.
+4. **No Placeholder Transition States:** Transition-state searches and Gibbs free energies ($\Delta G$) are reported as `NOT_AVAILABLE` because second-derivative analytical Hessians and saddle-point searches are not implemented.

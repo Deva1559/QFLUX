@@ -137,7 +137,7 @@ class CalculationJobService:
                 )
 
                 job.progress_pct = 85.0
-                job.log_output += f"[{datetime.utcnow().isoformat()}] SCF Roothaan-Hall equations converged in {res['iterations']} iterations.\n"
+                job.log_output += f"[{datetime.utcnow().isoformat()}] Electronic structure equations ({res['method']}) converged in {res['iterations']} iterations.\n"
                 job.log_output += f"Total Electronic Energy: {res['total_scf_energy_au']:.6f} Hartree\nHOMO-LUMO Gap: {res['homo_lumo_gap_ev']:.3f} eV\n"
                 db.commit()
 

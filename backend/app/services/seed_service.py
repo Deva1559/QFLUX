@@ -131,26 +131,26 @@ class SeedService:
         )
 
         cat_fe_n4 = Catalyst(
-            name="Single-Atom Fe-N4/C Catalyst (Hypothetical)",
+            name="Single-Atom Fe-N4/C Catalyst (Hypothetical In-Silico Candidate)",
             chemical_formula="Fe-N4-C",
-            material_type="Carbon-Supported Single-Atom Complex",
+            material_type="Carbon-Supported Single-Atom Complex (Hypothetical)",
             target_pfas="PFOA",
-            treatment_mechanism="Coordination activation of terminal C-F bond via low-valent Fe(I)/Fe(II) state",
-            reaction_conditions="Ambient temperature, neutral pH, low overpotential (0.8 V)",
-            light_or_electrical_source="Electrochemical (0.8 V vs RHE)",
+            treatment_mechanism="Proposed coordination activation of terminal C-F bond via low-valent Fe(I)/Fe(II) state",
+            reaction_conditions="Theoretical ambient temperature model, neutral pH, low overpotential (0.8 V)",
+            light_or_electrical_source="Electrochemical (0.8 V vs RHE proposed)",
             operating_temperature_c=25.0,
             operating_ph=7.0,
             solvent_medium="Aqueous",
             catalyst_loading_g_l=0.2,
             reported_parent_removal_pct=95.0,
             reported_defluorination_pct=85.0,
-            reported_byproducts="CO2, F-, minimal short-chain PFCAs",
+            reported_byproducts="CO2, F-, minimal short-chain PFCAs (Hypothetical Design Target)",
             catalyst_stability_cycles=10,
             energy_intensity_kwh_m3=4.2,
-            evidence_category="User-entered hypothetical candidate",
-            doi_or_url="hypothetical-catalyst-in-silico-01",
-            publication_citation="Q-FLUX 2.0 In-Silico Coordination Catalyst Screening Proposal (2026)",
-            known_limitations="Theoretical coordination design; requires wet-chemical synthesis, high-temperature pyrolysis, and HAADF-STEM confirmation.",
+            evidence_category="Hypothetical candidate",
+            doi_or_url="in-silico-coordination-screening-proposal-2026",
+            publication_citation="Q-FLUX 2.0 In-Silico Coordination Catalyst Screening Proposal (Theoretical Design, Unverified)",
+            known_limitations="Theoretical coordination design; has NOT been synthesized, crystallized, or verified in laboratory reactors. Defluorination and removal percentages are speculative computational design targets, not empirical observations.",
             verification_status="Hypothetical candidate"
         )
 
@@ -239,7 +239,23 @@ class SeedService:
             model_scope_description="Fundamental model for aliphatic carbon-fluorine bond activation and single-electron reduction."
         )
 
-        db.add_all([model_cf3coo, model_ch3f])
+        xyz_h2 = (
+            "H  0.000000  0.000000  0.000000\n"
+            "H  0.000000  0.000000  0.740848"
+        )
+        model_h2 = MolecularModel(
+            name="Hydrogen Molecule (H2) Exact Ab-Initio Benchmark",
+            chemical_formula="H2",
+            charge=0,
+            spin_multiplicity=1,
+            cartesian_coordinates_xyz=xyz_h2,
+            num_atoms=2,
+            num_electrons=2,
+            basis_set="STO-3G",
+            model_scope_description="Exact analytical ab-initio Roothaan-Hall STO-3G benchmark case (Szabo & Ostlund Table 3.3, R = 1.400 Bohr)."
+        )
+
+        db.add_all([model_cf3coo, model_ch3f, model_h2])
         db.flush()
 
         # Run Classical Electronic Structure Calculations
@@ -253,7 +269,7 @@ class SeedService:
         chem_run1 = ClassicalChemistryRun(
             model_id=model_cf3coo.id,
             project_id=project.id,
-            run_name="RHF Electronic Structure of CF3COO-",
+            run_name="Semi-Empirical Frontier Structure of CF3COO-",
             method_name=scf_cf3coo["method"],
             nuclear_repulsion_energy_au=scf_cf3coo["nuclear_repulsion_au"],
             electronic_energy_au=scf_cf3coo["electronic_energy_au"],
@@ -263,10 +279,10 @@ class SeedService:
             homo_lumo_gap_ev=scf_cf3coo["homo_lumo_gap_ev"],
             dipole_moment_debye=scf_cf3coo["dipole_moment_debye"],
             reaction_name="CF3COO- -> ·CF3 + CO2 + e- (Decarboxylation)",
-            reaction_energy_kcal_mol=-18.4,
-            energy_convention_note="Delta E = E(products) - E(reactants). Exothermic by 18.4 kcal/mol.",
-            converged=True,
-            iterations=14,
+            reaction_energy_kcal_mol=None,
+            energy_convention_note="Delta E = E(products) - E(reactants). Left unpopulated (UNAVAILABLE) until product fragments (.CF3, CO2) are computed in identical basis.",
+            converged=scf_cf3coo["converged"],
+            iterations=scf_cf3coo["iterations"],
             runtime_ms=scf_cf3coo["runtime_ms"],
             software_version=scf_cf3coo["software_version"],
             limitations=scf_cf3coo["limitations"]
@@ -282,7 +298,7 @@ class SeedService:
         chem_run2 = ClassicalChemistryRun(
             model_id=model_ch3f.id,
             project_id=project.id,
-            run_name="RHF Electronic Structure of CH3F C-F Cleavage Model",
+            run_name="Semi-Empirical Frontier Structure of CH3F C-F Model",
             method_name=scf_ch3f["method"],
             nuclear_repulsion_energy_au=scf_ch3f["nuclear_repulsion_au"],
             electronic_energy_au=scf_ch3f["electronic_energy_au"],
@@ -292,15 +308,44 @@ class SeedService:
             homo_lumo_gap_ev=scf_ch3f["homo_lumo_gap_ev"],
             dipole_moment_debye=scf_ch3f["dipole_moment_debye"],
             reaction_name="CH3F + e- -> ·CH3 + F- (Reductive C-F Cleavage)",
-            reaction_energy_kcal_mol=-24.6,
-            energy_convention_note="Delta E = E(products) - E(reactants). Exothermic reductive cleavage.",
-            converged=True,
-            iterations=12,
+            reaction_energy_kcal_mol=None,
+            energy_convention_note="Delta E = E(products) - E(reactants). Left unpopulated (UNAVAILABLE) until product fragments (.CH3, F-) are computed in identical basis.",
+            converged=scf_ch3f["converged"],
+            iterations=scf_ch3f["iterations"],
             runtime_ms=scf_ch3f["runtime_ms"],
             software_version=scf_ch3f["software_version"],
             limitations=scf_ch3f["limitations"]
         )
-        db.add_all([chem_run1, chem_run2])
+
+        scf_h2 = classical_chemistry_service.run_molecular_scf(
+            molecule_name="H2",
+            xyz_coords=xyz_h2,
+            charge=0,
+            spin_multiplicity=1,
+            basis_set="STO-3G"
+        )
+        chem_run_h2 = ClassicalChemistryRun(
+            model_id=model_h2.id,
+            project_id=project.id,
+            run_name="Exact Ab-Initio STO-3G Electronic Structure of H2 Benchmark",
+            method_name=scf_h2["method"],
+            nuclear_repulsion_energy_au=scf_h2["nuclear_repulsion_au"],
+            electronic_energy_au=scf_h2["electronic_energy_au"],
+            total_scf_energy_au=scf_h2["total_scf_energy_au"],
+            homo_energy_ev=scf_h2["homo_energy_ev"],
+            lumo_energy_ev=scf_h2["lumo_energy_ev"],
+            homo_lumo_gap_ev=scf_h2["homo_lumo_gap_ev"],
+            dipole_moment_debye=scf_h2["dipole_moment_debye"],
+            reaction_name="H2 -> 2 H. (Homolytic Bond Cleavage)",
+            reaction_energy_kcal_mol=None,
+            energy_convention_note="Delta E = E(products) - E(reactants). Benchmark ground state energy matches Szabo & Ostlund Table 3.3 (-1.116714 Hartree).",
+            converged=scf_h2["converged"],
+            iterations=scf_h2["iterations"],
+            runtime_ms=scf_h2["runtime_ms"],
+            software_version=scf_h2["software_version"],
+            limitations=scf_h2["limitations"]
+        )
+        db.add_all([chem_run1, chem_run2, chem_run_h2])
 
         # 5. Quantum Runs (Reduced C-F Active Space vs Toy Benchmark)
         q_mol = quantum_service.run_benchmark(model_type="Reduced C-F Active Space", optimizer="Nelder-Mead", random_seed=42)
@@ -372,14 +417,14 @@ class SeedService:
             step_number=1,
             reactant_name="PFOA + h+ (In2O3 valence hole)",
             product_name="Perfluoroheptyl Radical (C7F15·) + CO2 + H+",
-            transformation_description="Single-electron photo-oxidation of carboxylate causing spontaneous decarboxylation.",
+            transformation_description="Single-electron photo-oxidation of carboxylate causing spontaneous decarboxylation. Note: Kinetic activation barrier is uncalculated (transition-state saddle point search not implemented).",
             bond_changes="Alpha C-C bond cleaved; C=O carbonyl formed in CO2",
             charge=0,
             spin_multiplicity=2,
             chemical_conditions="UV-C irradiation (254 nm), surface In-O vacancy sites",
             reported_intermediates="Carboxyl radical intermediate [C7F15COO·]",
-            reaction_energy_kcal_mol=-18.4,
-            activation_barrier_kcal_mol=14.2,
+            reaction_energy_kcal_mol=None,
+            activation_barrier_kcal_mol=None,
             is_experimentally_observed=True,
             is_computationally_proposed=True,
             quantum_calc_status="Classical RHF Validated"
@@ -390,14 +435,14 @@ class SeedService:
             step_number=2,
             reactant_name="C7F15· + ·OH + H2O",
             product_name="PFHpA (C6F13COOH) + 2 F- + 2 H+",
-            transformation_description="Hydrolysis and beta-elimination yielding one-carbon shorter homologue (PFHpA) and releasing 2 fluorides.",
+            transformation_description="Hydrolysis and beta-elimination yielding one-carbon shorter homologue (PFHpA) and releasing 2 fluorides. Note: Kinetic activation barrier is uncalculated (transition-state saddle point search not implemented).",
             bond_changes="Two C-F bonds cleaved; terminal C-OH oxidized to carboxylic acid",
             charge=0,
             spin_multiplicity=1,
             chemical_conditions="Aqueous interface, presence of photogenerated ·OH radicals",
             reported_intermediates="Perfluoroheptanoyl fluoride (C6F13COF)",
-            reaction_energy_kcal_mol=-32.5,
-            activation_barrier_kcal_mol=21.8,
+            reaction_energy_kcal_mol=None,
+            activation_barrier_kcal_mol=None,
             is_experimentally_observed=True,
             is_computationally_proposed=True,
             quantum_calc_status="Classical RHF Validated"

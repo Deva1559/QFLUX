@@ -20,9 +20,11 @@ class CatalystPrioritizationEngine:
         cat: Catalyst,
         weights: Dict[str, float]
     ) -> Dict[str, Any]:
-        """Evaluates a single catalyst candidate across 10 dimensions."""
+        """Evaluates a single catalyst candidate across 10 dimensions with transparent
+        mathematical accounting of all score adjustments and missing-data penalties."""
         notes: List[str] = []
         is_rankable = True
+        penalty_breakdown: Dict[str, Any] = {}
         
         # 1. Parent Removal Score (0 to 1)
         parent_score = min(1.0, max(0.0, cat.reported_parent_removal_pct / 100.0))
@@ -34,6 +36,12 @@ class CatalystPrioritizationEngine:
             defluor_score = 0.0
             notes.append("Defluorination measurement is MISSING in source literature. Penalized heavily in score.")
             is_rankable = False
+            penalty_breakdown["missing_defluorination"] = {
+                "penalty_name": "Missing Defluorination Measurement Penalty",
+                "description": "Defluorination was not reported in the primary publication. Defluorination score is set to 0.0.",
+                "potential_score_loss_pct": round(weights.get("defluorination", 0.25) * 100.0, 1),
+                "rankable_status": "Candidate disqualified from evidence-supported ranking until fluoride release is analytically quantified."
+            }
 
         # 3. Byproduct Safety Score (0 to 1)
         byproducts_text = (cat.reported_byproducts or "").lower()
@@ -42,9 +50,19 @@ class CatalystPrioritizationEngine:
         elif "pfhpa" in byproducts_text or "short-chain" in byproducts_text or "pfcba" in byproducts_text:
             byproduct_score = 0.35
             notes.append("Generates recalcitrant shorter-chain fluorinated byproducts (e.g. PFHpA).")
+            penalty_breakdown["toxic_byproducts"] = {
+                "penalty_name": "Persistent Short-Chain PFCA Accumulation Penalty",
+                "description": "Degradation generates shorter-chain perfluorinated carboxylic acids that resist further cleavage.",
+                "byproduct_score_assigned": 35.0
+            }
         elif not byproducts_text:
             byproduct_score = 0.20
             notes.append("Byproducts not characterized in publication.")
+            penalty_breakdown["uncharacterized_byproducts"] = {
+                "penalty_name": "Uncharacterized Transformation Intermediates Penalty",
+                "description": "No byproduct analysis reported; cannot verify lack of persistent intermediates.",
+                "byproduct_score_assigned": 20.0
+            }
         else:
             byproduct_score = 0.60
 
@@ -63,10 +81,14 @@ class CatalystPrioritizationEngine:
         else:
             stability_score = 0.30
             notes.append("Reusability and cycling stability not reported.")
+            penalty_breakdown["missing_stability"] = {
+                "penalty_name": "Unreported Cycling Stability Penalty",
+                "description": "No cyclic reuse data reported; assigned baseline stability score of 30.0.",
+                "stability_score_assigned": 30.0
+            }
 
         # 6. Energy Feasibility (0 to 1)
         if cat.energy_intensity_kwh_m3 is not None:
-            # lower energy is better: 0-10 kWh/m3 is good, >50 kWh/m3 is low score
             energy_score = max(0.1, 1.0 - (cat.energy_intensity_kwh_m3 / 50.0))
         else:
             energy_score = 0.50
@@ -82,7 +104,7 @@ class CatalystPrioritizationEngine:
         completeness_score = sum(completeness_checks) / len(completeness_checks)
 
         # Composite Weighted Score
-        total_score = (
+        raw_total_score = (
             weights.get("defluorination", 0.25) * defluor_score
             + weights.get("parent_removal", 0.15) * parent_score
             + weights.get("byproduct_safety", 0.15) * byproduct_score
@@ -92,10 +114,19 @@ class CatalystPrioritizationEngine:
             + weights.get("evidence_completeness", 0.15) * completeness_score
         )
 
+        total_score = raw_total_score
+
         # Scientific constraint: Hypothetical candidates have unverified predicted properties
         if cat.verification_status == "Hypothetical candidate":
             total_score *= 0.75
             notes.append("Hypothetical score: Discounted by 25% due to absence of laboratory synthesis and experimental verification.")
+            penalty_breakdown["hypothetical_discount"] = {
+                "penalty_name": "Hypothetical In-Silico Candidate Discount",
+                "description": "25% deduction applied to composite score due to complete lack of physical synthesis or experimental reactor validation.",
+                "discount_factor": 0.75,
+                "score_before_discount": round(raw_total_score * 100.0, 1),
+                "score_after_discount": round(total_score * 100.0, 1)
+            }
 
         total_score_pct = round(total_score * 100.0, 1)
 
@@ -125,6 +156,7 @@ class CatalystPrioritizationEngine:
             "status": category,
             "is_rankable": is_rankable,
             "missing_defluorination_penalty_applied": not is_rankable,
+            "penalty_breakdown": penalty_breakdown,
             "primary_rationale": " | ".join(notes) if notes else f"{category} based on multi-criteria analysis.",
             "data_coverage_pct": round(completeness_score * 100.0, 1),
             "evidence_status": "HYPOTHETICAL" if cat.verification_status == "Hypothetical candidate" else ("LITERATURE_REPORTED" if cat.verification_status == "Verified against primary literature" else "UNKNOWN"),
@@ -151,7 +183,6 @@ class CatalystPrioritizationEngine:
     ) -> Dict[str, Any]:
         """Runs multi-criteria scoring and sensitivity analysis over all catalysts."""
         weights = {**DEFAULT_WEIGHTS, **(custom_weights or {})}
-        # Normalize weights to sum to 1.0
         sum_w = sum(weights.values())
         if sum_w > 0:
             weights = {k: v / sum_w for k, v in weights.items()}
@@ -172,7 +203,6 @@ class CatalystPrioritizationEngine:
         for shift_name, shift_w in [("High Defluorination Emphasis (+20%)", 0.45), ("Balanced Weighting", 0.25), ("Parent Removal Emphasis", 0.10)]:
             alt_weights = dict(weights)
             alt_weights["defluorination"] = shift_w
-            # re-normalize
             alt_sum = sum(alt_weights.values())
             alt_weights = {k: v / alt_sum for k, v in alt_weights.items()}
             
@@ -192,7 +222,7 @@ class CatalystPrioritizationEngine:
             weights_json=json.dumps(weights),
             rankings_json=json.dumps(ranked_candidates),
             sensitivity_analysis_json=json.dumps(sensitivity_cases),
-            notes="Multi-criteria weighted scoring across 10 dimensions with transparent missing-data penalties."
+            notes="Multi-criteria weighted scoring across 10 dimensions with transparent missing-data penalties and score adjustments."
         )
         db.add(run_record)
         db.commit()
